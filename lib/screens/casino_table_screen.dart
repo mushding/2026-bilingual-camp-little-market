@@ -61,13 +61,37 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
 
     String betType = '21:play';
     if (_isDice) {
-      final t = await showDialog<String>(
+      final t = await showModalBottomSheet<String>(
         context: context,
-        builder: (ctx) => SimpleDialog(title: const Text('壓注內容'), children: [
-          for (final e in const {'big': '大 (8–12) 1:1', 'small': '小 (2–6) 1:1', 'seven': '七 (=7) 4:1'}.entries)
-            SimpleDialogOption(
-                onPressed: () => Navigator.pop(ctx, e.key), child: Text(e.value)),
-        ]),
+        builder: (ctx) {
+          Widget option(String value, String title, String subtitle, String payout) =>
+              ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                title: Text(title,
+                    style: const TextStyle(
+                        fontSize: 26, fontWeight: FontWeight.bold)),
+                subtitle: Text(subtitle, style: const TextStyle(fontSize: 16)),
+                trailing: Text(payout, style: const TextStyle(fontSize: 18)),
+                onTap: () => Navigator.pop(ctx, value),
+              );
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Text('壓注內容',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+                option('big', '大', '和 8–12', '賠 1:1'),
+                option('small', '小', '和 2–6', '賠 1:1'),
+                option('seven', '七', '和 = 7', '賠 4:1'),
+              ],
+            ),
+          );
+        },
       );
       if (t == null) return;
       betType = t;

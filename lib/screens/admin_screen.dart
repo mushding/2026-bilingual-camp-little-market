@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_client.dart';
-import '../services/nfc_service.dart';
 
-/// 總控管理畫面 — 換日 / 結息 / 市場關閉 / 回應卡。皆二次確認、不可逆。
+/// 總控管理畫面 — 換日 / 結息 / 市場關閉。皆二次確認、不可逆。
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
   @override
@@ -91,6 +90,9 @@ class _AdminScreenState extends State<AdminScreen> {
             ),
           const SizedBox(height: 16),
           const Text('換日 set_day', style: _h),
+          // 換日做啥
+          const Text('切換目前天數。影響各攤可用交易與『本攤位』下拉清單，並決定結息屬於哪一場。每場小市集開始前切換。',
+              style: TextStyle(fontSize: 12, color: Colors.grey)),
           Wrap(spacing: 8, children: [
             for (final d in ['D1', 'D2', 'D3'])
               OutlinedButton(
@@ -108,16 +110,20 @@ class _AdminScreenState extends State<AdminScreen> {
           const Text('每場結息 settle_interest（每場一次，最多 3 次）', style: _h),
           Wrap(spacing: 8, children: [
             for (final d in ['D1', 'D2', 'D3'])
-              FilledButton.tonal(
-                onPressed: _busy
-                    ? null
-                    : () async {
-                        if (await _confirm('結息 $d', '對所有定存 +20%（複利）。\n每場只按一次，不可逆。確定？')) {
-                          await _run(() => ApiClient.adminSettleInterest(d), '結息 $d');
-                        }
-                      },
-                child: Text('結息 $d'),
-              ),
+              // 已結息過就 disable + 打勾
+              if ((_state?['settled_days'] as List?)?.contains(d) == true)
+                FilledButton.tonal(onPressed: null, child: Text('結息 $d ✓'))
+              else
+                FilledButton.tonal(
+                  onPressed: _busy
+                      ? null
+                      : () async {
+                          if (await _confirm('結息 $d', '對所有定存 +20%（複利）。\n每場只按一次，不可逆。確定？')) {
+                            await _run(() => ApiClient.adminSettleInterest(d), '結息 $d');
+                          }
+                        },
+                  child: Text('結息 $d'),
+                ),
           ]),
           const Divider(height: 32),
           const Text('市場關閉 market_close（D3 突襲，不可逆）', style: _h),
@@ -136,25 +142,9 @@ class _AdminScreenState extends State<AdminScreen> {
               child: Text('🔒 市場關閉', style: TextStyle(fontSize: 18)),
             ),
           ),
-          const Divider(height: 32),
-          const Text('回應卡 response_card（D3，每生 +200 KP，掃卡）', style: _h),
-          OutlinedButton.icon(
-            onPressed: _busy ? null : _responseCard,
-            icon: const Icon(Icons.nfc),
-            label: const Text('掃卡登記回應卡'),
-          ),
         ]),
       ),
     );
-  }
-
-  Future<void> _responseCard() async {
-    final uid = await NfcService.readUidOnce();
-    if (uid == null) {
-      _snack('掃描取消或 NFC 不可用', false);
-      return;
-    }
-    await _run(() => ApiClient.adminResponseCard(uid), '回應卡');
   }
 }
 

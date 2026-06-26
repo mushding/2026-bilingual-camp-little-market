@@ -54,7 +54,7 @@ class _GuildPendingScreenState extends State<GuildPendingScreen> {
       final res = await ApiClient.guildComplete(
         studentUid: row['student_uid'],
         stallId: widget.stallId,
-        staffUid: Settings.instance.staffUid,
+        staffUid: Settings.instance.deviceId,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -97,10 +97,22 @@ class _GuildPendingScreenState extends State<GuildPendingScreen> {
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (_, i) {
         final r = _pending![i];
+        final group = (r['student_group'] ?? '') as String;
+        final remain = (r['remaining_seconds'] ?? 0) as int;
+        final mm = remain ~/ 60, ss = remain % 60;
+        final urgent = remain <= 120;
         return ListTile(
           leading: const Icon(Icons.person),
-          title: Text(r['student_name'] ?? '?', style: const TextStyle(fontSize: 18)),
-          subtitle: Text('抽於 ${r['drawn_at'] ?? ''}'),
+          title: Text(
+            '${r['student_name'] ?? '?'}${group.isEmpty ? '' : '　[$group]'}',
+            style: const TextStyle(fontSize: 18),
+          ),
+          subtitle: Text(
+            '剩 ${mm}:${ss.toString().padLeft(2, '0')}',
+            style: TextStyle(
+                color: urgent ? Colors.redAccent : Colors.white54,
+                fontWeight: urgent ? FontWeight.bold : FontWeight.normal),
+          ),
           trailing: FilledButton(
             onPressed: _busy ? null : () => _complete(r),
             child: const Text('完成'),

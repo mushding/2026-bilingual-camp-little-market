@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../data/stalls.dart';
 import '../models/student_state.dart';
@@ -28,6 +30,49 @@ class _ScanScreenState extends State<ScanScreen> {
   TxnType? _txn;
   String? _banner; // 結果訊息
   bool _bannerOk = true;
+  String _bannerName = '';
+  String _bannerGroup = '';
+  Timer? _bannerTimer;
+  Timer? _pollTimer;
+  bool _marketClosedShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 每 8 秒輪詢市場狀態：市場關閉時跳通知請學員回禮堂
+    _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) => _pollMarket());
+  }
+
+  @override
+  void dispose() {
+    _bannerTimer?.cancel();
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _pollMarket() async {
+    if (!Settings.instance.enrolled || _marketClosedShown) return;
+    try {
+      final st = await ApiClient.appState();
+      if (st['market_open'] == false && mounted && !_marketClosedShown) {
+        _marketClosedShown = true;
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: Colors.red.shade900,
+            title: const Text('🔔 市場已關閉'),
+            content: const Text('小市集結束，請學員停止交易，回到禮堂集合。',
+                style: TextStyle(fontSize: 18)),
+            actions: [
+              FilledButton(
+                  onPressed: () => Navigator.pop(ctx), child: const Text('知道了')),
+            ],
+          ),
+        );
+      }
+    } catch (_) {/* 網路抖動忽略 */}
+  }
 
   Stall get _stall => stallById(Settings.instance.stallId);
   List<TxnType> get _allowed =>
@@ -133,7 +178,7 @@ class _ScanScreenState extends State<ScanScreen> {
         break;
       case TxnType.donation:
         final v = await showAmountInput(context,
-            title: '奉獻金額', min: 10, hint: 'D3：≥100 額外 +50 KP');
+            title: '奉獻金額', min: 10, hint: '現金 1:1 轉天國點數');
         if (v == null) return;
         amount = v;
         break;
@@ -143,10 +188,7 @@ class _ScanScreenState extends State<ScanScreen> {
         tier = v;
         break;
       case TxnType.witness:
-        if (Settings.instance.staffUid.isEmpty) {
-          _showBanner('請先到設定綁定關主 UID', false);
-          return;
-        }
+        // 不需綁定關主：用本機自動裝置 id 防刷（每位同工各自一台）
         break;
       case TxnType.guildDraw:
       case TxnType.lookup:
@@ -167,20 +209,44 @@ class _ScanScreenState extends State<ScanScreen> {
         cost: cost,
         reward: reward,
         tier: tier == 0 ? null : tier,
-        staffUid: t == TxnType.witness ? Settings.instance.staffUid : null,
+        staffUid: t == TxnType.witness ? Settings.instance.deviceId : null,
       );
       setState(() {
         _student = res;
         _state = _S.result;
       });
-      _showBanner(res.message, res.ok);
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted && _state == _S.result) _reset();
-      });
+      _showResultBanner(res);
     } catch (e) {
       _showBanner('$e', false);
       setState(() => _state = _S.loaded);
     }
+  }
+
+  /// 交易結果 banner：帶姓名+組別，3 秒自動關（或按 X），關後回等待掃卡。
+  void _showResultBanner(StudentState res) {
+    _bannerTimer?.cancel();
+    setState(() {
+      _banner = res.message;
+      _bannerOk = res.ok;
+      _bannerName = res.studentName;
+      _bannerGroup = res.group;
+    });
+    _bannerTimer = Timer(const Duration(seconds: 3), _dismissBanner);
+  }
+
+  void _dismissBanner() {
+    _bannerTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _banner = null;
+      _bannerName = '';
+      _bannerGroup = '';
+      if (_state == _S.result) {
+        _state = _S.idle;
+        _student = null;
+        _txn = null;
+      }
+    });
   }
 
   Future<bool?> _bingoResult() => showDialog<bool>(
@@ -272,21 +338,37 @@ class _ScanScreenState extends State<ScanScreen> {
         ]),
       );
 
-  Widget _bannerWidget() => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: (_bannerOk ? Colors.green : Colors.red).withValues(alpha: 0.2),
-          border: Border.all(color: _bannerOk ? Colors.green : Colors.red),
-          borderRadius: BorderRadius.circular(6),
+  Widget _bannerWidget() {
+    final c = _bannerOk ? Colors.green : Colors.red;
+    final title = _bannerName.isEmpty
+        ? null
+        : '$_bannerName${_bannerGroup.isEmpty ? '' : '　[$_bannerGroup]'}';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.2),
+        border: Border.all(color: c),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(_bannerOk ? Icons.check_circle : Icons.error, color: c),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (title != null)
+              Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(_banner!, style: const TextStyle(fontSize: 15)),
+          ]),
         ),
-        child: Row(children: [
-          Icon(_bannerOk ? Icons.check_circle : Icons.error,
-              color: _bannerOk ? Colors.green : Colors.red),
-          const SizedBox(width: 8),
-          Expanded(child: Text(_banner!, style: const TextStyle(fontSize: 15))),
-        ]),
-      );
+        IconButton(
+          icon: const Icon(Icons.close, size: 20),
+          visualDensity: VisualDensity.compact,
+          onPressed: _dismissBanner,
+        ),
+      ]),
+    );
+  }
 
   Widget _body() {
     // 特殊攤位：專屬入口

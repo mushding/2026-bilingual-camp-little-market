@@ -41,17 +41,28 @@ class _MailScreenState extends State<MailScreen> {
 
   Future<void> _register(Map<String, dynamic> stu) async {
     final cards = await showAmountInput(context,
-        title: '${stu['name']} — 感謝卡張數', quickKeys: const [1, 2, 3], min: 1, max: 3, hint: '1–3');
+        title: '${stu['name']} — 感謝卡張數', quickKeys: const [1, 2, 3, 5, 10], min: 1, hint: '張數不限');
     if (cards == null) return;
     setState(() => _busy = true);
     try {
       final res = await ApiClient.scan(
           uid: stu['uid'], stallId: 'mail', action: 'mail_kp', cards: cards);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(res.message),
-          backgroundColor: res.ok ? Colors.green : Colors.red,
-        ));
+        if (res.ok) {
+          _name.clear();
+          setState(() => _candidates = null);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('✅ ${res.message}',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(res.message),
+            backgroundColor: Colors.red,
+          ));
+        }
       }
     } catch (e) {
       if (mounted) {

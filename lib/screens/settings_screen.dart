@@ -10,24 +10,35 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late final TextEditingController _staff;
   final _code = TextEditingController();
   late String _stallId;
   late bool _allTxn;
   bool _enrolling = false;
+  String _day = '';  // 目前天（後端），用來過濾攤位下拉
 
   @override
   void initState() {
     super.initState();
     final s = Settings.instance;
-    _staff = TextEditingController(text: s.staffUid);
     _stallId = s.stallId;
     _allTxn = s.allTxnMode;
+    _loadDay();
   }
+
+  Future<void> _loadDay() async {
+    if (!Settings.instance.enrolled) return;  // 未註冊無法呼叫 API
+    try {
+      final st = await ApiClient.appState();
+      if (mounted) setState(() => _day = st['current_day'] ?? '');
+    } catch (_) {/* 取不到就顯示全部攤位 */}
+  }
+
+  /// 依目前天過濾攤位；取不到天則顯示全部。
+  List<Stall> get _stallOptions =>
+      _day.isEmpty ? kStalls : stallsForDay(_day);
 
   @override
   void dispose() {
-    _staff.dispose();
     _code.dispose();
     super.dispose();
   }
@@ -61,7 +72,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _save() async {
     final s = Settings.instance;
-    await s.setStaffUid(_staff.text);
     await s.setStallId(_stallId);
     await s.setAllTxnMode(_allTxn);
     if (!mounted) return;
@@ -118,25 +128,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 20),
 
-            const Text('本攤位', style: _lbl),
+            Text(_day.isEmpty ? '本攤位' : '本攤位（目前 $_day 可用）', style: _lbl),
             DropdownButtonFormField<String>(
-              value: _stallId,
+              // 若目前選的攤位不在當天清單，value 設 null 避免 assert
+              value: _stallOptions.any((st) => st.id == _stallId) ? _stallId : null,
               isExpanded: true,
               decoration: const InputDecoration(border: OutlineInputBorder()),
-              items: kStalls
+              hint: const Text('選擇本攤位'),
+              items: _stallOptions
                   .map((st) => DropdownMenuItem(value: st.id, child: Text('${st.label}  (${st.id})')))
                   .toList(),
               onChanged: (v) => setState(() => _stallId = v ?? _stallId),
-            ),
-            const SizedBox(height: 20),
-            const Text('本機關主 UID（見證 / 公會防作弊用）', style: _lbl),
-            TextField(
-              controller: _staff,
-              autocorrect: false,
-              decoration: const InputDecoration(
-                hintText: '同工卡 UID 或自訂字串',
-                border: OutlineInputBorder(),
-              ),
             ),
             const SizedBox(height: 12),
             SwitchListTile(

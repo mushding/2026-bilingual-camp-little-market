@@ -160,6 +160,14 @@ def admin_get_state():
         return bank.admin_state(s)
 
 
+@app.get("/api/state")
+def public_state():
+    """任何已註冊裝置可讀：目前天 + 市場開關（給 App 過濾攤位/輪詢關市）。"""
+    with SessionLocal() as s:
+        st = bank.admin_state(s)
+        return {"current_day": st["current_day"], "market_open": st["market_open"]}
+
+
 @app.post("/api/admin/bind")
 def admin_bind(req: schemas.BindReq):
     from datetime import datetime, timezone

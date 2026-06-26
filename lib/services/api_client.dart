@@ -131,8 +131,9 @@ class ApiClient {
   static Future<Map<String, dynamic>> adminMarketClose() =>
       _post('/api/admin/market_close', {});
 
-  static Future<Map<String, dynamic>> adminResponseCard(String uid) =>
-      _post('/api/admin/response_card', {'uid': uid});
+  /// 任何已註冊裝置可讀（目前天 + 市場開關）。
+  static Future<Map<String, dynamic>> appState() async =>
+      await _get('/api/state') as Map<String, dynamic>;
 
   static Future<Map<String, dynamic>> adminState() async =>
       await _get('/api/admin/state') as Map<String, dynamic>;
