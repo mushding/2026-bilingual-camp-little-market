@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- NFC tag reading entitlement.
+         Apple Developer Program ($99/yr) account 才能在 Identifier 開啟此 capability。
+         免費 Apple ID 簽 NFC app 會在 build 時或 runtime 失敗。 -->
+    <key>com.apple.developer.nfc.readersession.formats</key>
+    <array>
+        <string>TAG</string>
+    </array>
+</dict>
+</plist>

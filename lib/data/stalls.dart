@@ -1,0 +1,48 @@
+import '../models/txn_type.dart';
+
+/// 攤位設定 — 對應 docs/app/30 §1。
+/// stall_id → 顯示名 + 允許的交易集合（lookup 一律隱含可用）。
+class Stall {
+  final String id;
+  final String label;
+  final List<TxnType> txns;
+  const Stall(this.id, this.label, this.txns);
+}
+
+/// 9 款小遊戲關（皆走 guildComplete，差別在 stall_id）。
+const _games = {
+  'game_color': '顏色分類',
+  'game_password': '終極密碼',
+  'game_moving': '搬家人工',
+  'game_basketball': '投籃高手',
+  'game_plane': '丟紙飛機',
+  'game_balloon': '拍氣球',
+  'game_charades': '比手畫腳',
+  'game_memory': '記憶翻牌',
+  'game_tangram': '七巧板',
+};
+
+final List<Stall> kStalls = [
+  const Stall('day1_doll', '賣娃娃', [TxnType.day1SellDoll]),
+  const Stall('day1_ring', '套圈圈', [TxnType.day1RingToss]),
+  const Stall('day1_dart', '射飛鏢', [TxnType.day1Dart]),
+  const Stall('day1_bingo', '麻將賓果', [TxnType.day1Bingo]),
+  const Stall('bank', '銀行', [TxnType.bankDeposit, TxnType.bankWithdraw]),
+  const Stall('witness', '聊天聽見證', [TxnType.witness]),
+  const Stall('donation', '舊鞋救命', [TxnType.donation]),
+  const Stall('exchange', '積分兌換', [TxnType.exchange]),
+  const Stall('grocery', '雜貨店', [TxnType.grocery]),
+  const Stall('mail', '郵政', [TxnType.mailKp]),
+  const Stall('meal', '餐費', [TxnType.meal]),
+  const Stall('casino_21', '賭場21點', [TxnType.casino21]),
+  const Stall('casino_dice', '賭場大小骰子', [TxnType.casinoDice]),
+  const Stall('guild', '公會台', [TxnType.guildDraw]),
+  // 9 款小遊戲關
+  for (final e in _games.entries) Stall(e.key, e.value, const [TxnType.guildComplete]),
+];
+
+Stall stallById(String id) =>
+    kStalls.firstWhere((s) => s.id == id, orElse: () => kStalls.first);
+
+/// 「全部交易」測試模式用：所有 TxnType。
+final List<TxnType> kAllTxns = TxnType.values;

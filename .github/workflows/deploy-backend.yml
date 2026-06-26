@@ -1,0 +1,43 @@
+name: Deploy backend to GCE VM
+
+# push 到 main 動到 backend/ 時，SSH 進既有 VM → git pull → 重啟 systemd 服務。
+# 走 gcloud compute ssh + IAP 隧道：VM 不需公開 IP、不必開 22 port 給全世界。
+on:
+  push:
+    branches: [main]
+    paths: ['backend/**', '.github/workflows/deploy-backend.yml']
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  ZONE: ${{ vars.GCP_ZONE }}              # 例：asia-east1-c
+  VM: ${{ vars.GCP_VM_NAME }}             # 例：bilingual-camp-little-market-backend-2026
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write                      # WIF
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: SSH deploy
+        run: |
+          gcloud compute ssh "$VM" \
+            --zone "$ZONE" --project "$PROJECT_ID" --tunnel-through-iap \
+            --command 'set -e
+              cd ~/2026-bilingual-camp-little-market
+              git pull --ff-only
+              cd backend
+              . .venv/bin/activate
+              pip install -q -r requirements.txt
+              python -m pytest -q tests/ || python tests/test_economy.py
+              sudo systemctl restart flyyoung-backend
+              echo "deployed: $(git rev-parse --short HEAD)"'

@@ -1,0 +1,133 @@
+"""核心金流自我檢查。跑：cd backend && python -m pytest tests/ -q
+（或直接 python tests/test_economy.py 跑 assert）
+
+用 in-memory SQLite，不需起 server。
+"""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.environ["DATABASE_URL"] = "sqlite://"  # in-memory
+
+import db  # noqa: E402
+from sqlalchemy import StaticPool, create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+
+# in-memory 單一連線（多 session 共用同一 DB）
+db.engine = create_engine("sqlite://", connect_args={"check_same_thread": False},
+                          poolclass=StaticPool, future=True)
+db.SessionLocal = sessionmaker(bind=db.engine, expire_on_commit=False, future=True)
+
+import models  # noqa: E402
+from constants import TIER_MAP  # noqa: E402
+from schemas import ScanReq  # noqa: E402
+from services import bank, casino  # noqa: E402
+from services.txn import handle_scan  # noqa: E402
+
+db.Base.metadata.create_all(db.engine)
+S = db.SessionLocal
+
+
+def fresh_state(market_open=1, day="D2"):
+    with S.begin() as s:
+        s.query(models.GameState).delete()
+        s.add(models.GameState(id=1, current_day=day, market_open=market_open,
+                               settlement_count=0, settled_days="[]"))
+
+
+def add_student(uid, seed=500):
+    with S.begin() as s:
+        if s.get(models.Student, uid):
+            return
+        s.add(models.Student(uid=uid, name="測試", seed_amount=seed, balance=seed))
+
+
+def scan(**kw):
+    with S.begin() as s:
+        return handle_scan(s, ScanReq(**kw)).model_dump()
+
+
+def test_debit_and_insufficient():
+    fresh_state(); add_student("A", 100)
+    assert scan(uid="A", stall_id="grocery", action="debit", amount=30)["balance"] == 70
+    r = scan(uid="A", stall_id="grocery", action="debit", amount=999)
+    assert r["ok"] is False and r["balance"] == 70  # 不足不扣
+
+
+def test_exchange_points():
+    fresh_state(); add_student("B", 1000)
+    r = scan(uid="B", stall_id="exchange", action="exchange_points", tier=800)
+    assert r["points"] == TIER_MAP[800] == 1000 and r["balance"] == 200
+
+
+def test_donate_kp_and_d3_bonus():
+    fresh_state(day="D3"); add_student("C", 500)
+    r = scan(uid="C", stall_id="donation", action="donate", amount=100)
+    assert r["kingdom_points"] == 150 and r["balance"] == 400  # 100 + D3 bonus 50
+    r2 = scan(uid="C", stall_id="donation", action="donate", amount=100)
+    assert r2["kingdom_points"] == 250  # bonus 只給一次
+
+
+def test_witness_dedup():
+    fresh_state(); add_student("D", 500)
+    assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S1")["kingdom_points"] == 100
+    assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S1")["ok"] is False
+    assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S2")["kingdom_points"] == 200
+
+
+def test_mail_kp_cap():
+    fresh_state(); add_student("E", 500)
+    assert scan(uid="E", stall_id="mail", action="mail_kp", cards=2)["kingdom_points"] == 40
+    r = scan(uid="E", stall_id="mail", action="mail_kp", cards=5)  # 只剩 1 張額度
+    assert r["kingdom_points"] == 60  # 封頂 3 張 = 60
+
+
+def test_deposit_interest_compound():
+    fresh_state(day="D1"); add_student("F", 500)
+    scan(uid="F", stall_id="bank", action="deposit", amount=100)
+    for d in ("D1", "D2", "D3"):
+        with S.begin() as s:
+            bank.settle_interest(s, d)
+    with S.begin() as s:
+        # 100 -> 120 -> 144 -> 172 (floor(172.8))
+        assert s.get(models.Student, "F").deposit_balance == 172
+
+
+def test_market_close_x01():
+    fresh_state(day="D3"); add_student("G", 500)
+    scan(uid="G", stall_id="bank", action="deposit", amount=100)  # bal 400, dep 100
+    with S.begin() as s:
+        bank.market_close(s)
+    with S.begin() as s:
+        g = s.get(models.Student, "G")
+        assert g.balance == 0 and g.deposit_balance == 0
+        assert g.points == 50  # floor((400+100)*0.1)
+    # 關市後僅 lookup
+    assert scan(uid="G", stall_id="grocery", action="debit", amount=1)["ok"] is False
+
+
+def test_dice_seven_payout():
+    fresh_state(); add_student("H", 500)
+    with S.begin() as s:
+        rid = casino.open_round(s, "dice", "casino_dice")["round_id"]
+    with S.begin() as s:
+        casino.bet(s, rid, "H", "seven", 10)
+    with S.begin() as s:
+        res = casino.settle(s, rid, dice=[3, 4])  # sum 7
+    with S.begin() as s:
+        # 凍結 -10，命中 seven 賠 5x = +50，淨 +40 → 500-10+50=540
+        assert s.get(models.Student, "H").balance == 540
+
+
+def test_guild_draw_fee_and_pending():
+    fresh_state(); add_student("I", 500)
+    r = scan(uid="I", stall_id="guild", action="guild_draw")
+    assert r["balance"] == 470 and r["assigned_game"]  # 扣 30
+
+
+if __name__ == "__main__":
+    fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+    for fn in fns:
+        fn()
+        print(f"ok  {fn.__name__}")
+    print(f"\nALL {len(fns)} PASS")
