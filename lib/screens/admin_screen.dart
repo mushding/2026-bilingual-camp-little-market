@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/api_client.dart';
+import '../services/nfc_service.dart';
 
 /// 總控管理畫面 — 換日 / 結息 / 市場關閉。皆二次確認、不可逆。
 class AdminScreen extends StatefulWidget {
@@ -62,6 +64,33 @@ class _AdminScreenState extends State<AdminScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _readUid() async {
+    final uid = await NfcService.readUidOnce();
+    if (!mounted) return;
+    if (uid == null) {
+      _snack('掃描取消或 NFC 不可用', false);
+      return;
+    }
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('卡片 UID'),
+        content: SelectableText(uid,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 22)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: uid));
+              _snack('已複製 UID', true);
+            },
+            child: const Text('複製'),
+          ),
+          FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('關閉')),
+        ],
+      ),
+    );
   }
 
   @override
@@ -140,6 +169,19 @@ class _AdminScreenState extends State<AdminScreen> {
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
               child: Text('🔒 市場關閉', style: TextStyle(fontSize: 18)),
+            ),
+          ),
+          const Divider(height: 32),
+          const Text('讀卡 UID（綁卡/建名單用）', style: _h),
+          const Text('感應 NTAG → 顯示 UID，可複製。',
+              style: TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _busy ? null : _readUid,
+            icon: const Icon(Icons.nfc),
+            label: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Text('掃卡讀 UID', style: TextStyle(fontSize: 16)),
             ),
           ),
         ]),
