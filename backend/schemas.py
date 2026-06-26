@@ -77,3 +77,13 @@ class SettleReq(BaseModel):
 
 class UidReq(BaseModel):
     uid: str
+
+
+class EnrollReq(BaseModel):
+    code: str
+    label: str | None = None
+
+
+class RevokeReq(BaseModel):
+    label: str | None = None
+    token: str | None = None

@@ -84,6 +84,17 @@ class WitnessLog(Base):
     __table_args__ = (UniqueConstraint("student_uid", "staff_uid", name="uq_witness"),)
 
 
+class DeviceToken(Base):
+    """關主手機 enrollment token。存 token 的 sha256（不存明文）。"""
+    __tablename__ = "device_tokens"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    token_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
+    scope: Mapped[str] = mapped_column(String)  # 'admin' | 'staff'
+    label: Mapped[str] = mapped_column(String, default="")  # 哪支手機/攤位，方便撤銷
+    revoked: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[str] = mapped_column(String, default="")
+
+
 class GameState(Base):
     __tablename__ = "game_state"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)  # =1

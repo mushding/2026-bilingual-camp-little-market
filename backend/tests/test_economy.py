@@ -125,6 +125,25 @@ def test_guild_draw_fee_and_pending():
     assert r["balance"] == 470 and r["assigned_game"]  # 扣 30
 
 
+def test_auth_enroll_verify_revoke():
+    import auth
+    with S.begin() as s:
+        bad = auth.enroll(s, "wrong-code")
+        assert bad["ok"] is False
+        a = auth.enroll(s, "dev-admin-code", "總控機")
+        st = auth.enroll(s, "dev-staff-code", "銀行攤")
+    assert a["scope"] == "admin" and st["scope"] == "staff"
+    with S.begin() as s:
+        assert auth.verify(s, a["token"]) == "admin"
+        assert auth.verify(s, st["token"]) == "staff"
+        assert auth.verify(s, "garbage") is None
+    with S.begin() as s:
+        auth.revoke(s, label="銀行攤")
+    with S.begin() as s:
+        assert auth.verify(s, st["token"]) is None   # 撤銷後失效
+        assert auth.verify(s, a["token"]) == "admin"  # 其他不受影響
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for fn in fns:

@@ -6,9 +6,10 @@
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query, UploadFile
+from fastapi import FastAPI, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 
+import auth
 import schemas
 from db import SessionLocal, init_db
 from services import bank, casino, guild, report
@@ -22,6 +23,40 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="小市集 Backend v1.0", lifespan=lifespan)
+
+# 需要 admin scope 的路徑前綴（admin 操作 + 報表含全體資料）
+ADMIN_PREFIXES = ("/api/admin/", "/api/report")
+
+
+@app.middleware("http")
+async def require_token(request: Request, call_next):
+    """Bearer token 驗證。/health 與 /api/auth/enroll 免驗；/api/admin/* 與報表需 admin。"""
+    path = request.url.path
+    if path in ("/health",) or path.startswith("/api/auth/enroll"):
+        return await call_next(request)
+
+    hdr = request.headers.get("authorization", "")
+    token = hdr[7:] if hdr.lower().startswith("bearer ") else ""
+    with SessionLocal() as s:
+        scope = auth.verify(s, token)
+    if scope is None:
+        return JSONResponse({"ok": False, "message": "未授權（請重新註冊裝置）"}, status_code=401)
+    if any(path.startswith(p) for p in ADMIN_PREFIXES) and scope != "admin":
+        return JSONResponse({"ok": False, "message": "需總控權限"}, status_code=403)
+    return await call_next(request)
+
+
+# ── 裝置註冊 / 撤銷 ──────────────────────────────────────────────────────
+@app.post("/api/auth/enroll")
+def auth_enroll(req: schemas.EnrollReq):
+    with SessionLocal.begin() as s:
+        return auth.enroll(s, req.code, req.label or "")
+
+
+@app.post("/api/admin/revoke")
+def auth_revoke(req: schemas.RevokeReq):
+    with SessionLocal.begin() as s:
+        return auth.revoke(s, label=req.label, token=req.token)
 
 
 @app.get("/")

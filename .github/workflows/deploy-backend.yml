@@ -28,6 +28,16 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      # 先把 enrollment 設定碼寫進 VM 的 root-only env file（值經 IAP 加密傳輸，GitHub log 自動遮罩）
+      - name: Write enroll codes to VM
+        env:
+          ENROLL_ADMIN_CODE: ${{ secrets.ENROLL_ADMIN_CODE }}
+          ENROLL_STAFF_CODE: ${{ secrets.ENROLL_STAFF_CODE }}
+        run: |
+          gcloud compute ssh "$VM" \
+            --zone "$ZONE" --project "$PROJECT_ID" --tunnel-through-iap \
+            --command "printf 'ENROLL_ADMIN_CODE=%s\nENROLL_STAFF_CODE=%s\n' '$ENROLL_ADMIN_CODE' '$ENROLL_STAFF_CODE' | sudo tee /etc/flyyoung.env >/dev/null && sudo chmod 600 /etc/flyyoung.env"
+
       - name: SSH bootstrap + deploy
         run: |
           gcloud compute ssh "$VM" \
@@ -51,6 +61,7 @@ jobs:
                 "[Service]" \
                 "User=$(whoami)" \
                 "WorkingDirectory=$DIR/backend" \
+                "EnvironmentFile=-/etc/flyyoung.env" \
                 "Environment=DATABASE_URL=sqlite:///$HOME/flyyoung.db" \
                 "ExecStart=$DIR/backend/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 8080" \
                 "Restart=always" \
