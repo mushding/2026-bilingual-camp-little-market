@@ -167,6 +167,43 @@ echo "GCP_SA_EMAIL     = $SA_EMAIL"
 
 ---
 
+## 學員名單匯入（seed_import）
+
+CSV 欄位：`name,uid,seed_amount[,group,seat_no]`。
+- `uid`：**大寫、冒號分隔**，要跟 App `nfc_service` 讀出的格式一致（例 `04:73:1B:D3:47:02:89`）。
+- `seed_amount`：抽籤起始金 **500 / 400 / 300**（才幹 5/2/1）。
+- `group`/`seat_no`：可選，郵政 by-name 同名消歧用。
+- 重複 uid 自動 skip。
+
+匯入（在 VM 內，或本機對著 backend）：
+```bash
+cd backend && . .venv/bin/activate
+python seed_import.py students.csv          # CLI 直接寫 DB
+# 或 API（multipart）：
+curl -F file=@students.csv http://104.199.226.128:8080/api/admin/import
+```
+
+**現成檔：**
+- `backend/students.test.csv` — 2 個測試帳號（已 bind 到 live）：
+  | 名 | uid | seed |
+  |---|---|---|
+  | 測試員A | `04:73:1B:D3:47:02:89` | 500 |
+  | 測試員B | `04:13:E8:D0:47:02:89` | 300 |
+- `backend/students.example.csv` — 正式名單格式範本。
+
+> ⏳ **報名未截止** — 正式 UID 名單之後補。流程：報名完 → 綁卡蒐集 UID
+> （感應 → 輸入姓名 → 選抽籤金額 → `POST /api/admin/bind`，或整理成 CSV 跑 seed_import）
+> → 匯入。**營前記得先清測試資料**：
+> ```bash
+> # VM 內：清掉測試帳號 + 任何測試交易，重來
+> sudo systemctl stop flyyoung-backend
+> rm -f ~/flyyoung.db ~/flyyoung.db-*
+> sudo systemctl start flyyoung-backend
+> python seed_import.py students.csv     # 匯正式名單
+> ```
+
+---
+
 ## 3. 本機跑 backend（開發 / 現場備援）
 
 ```bash
