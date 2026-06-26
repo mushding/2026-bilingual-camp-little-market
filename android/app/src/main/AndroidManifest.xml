@@ -1,5 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- 連後端 API（release build 不會自動加，必須宣告，否則 Failed host lookup） -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- NFC permission + feature -->
     <uses-permission android:name="android.permission.NFC" />
     <uses-feature android:name="android.hardware.nfc" android:required="true" />
