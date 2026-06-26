@@ -75,8 +75,8 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Stall get _stall => stallById(Settings.instance.stallId);
-  List<TxnType> get _allowed =>
-      Settings.instance.allTxnMode ? kAllTxns : _stall.txns;
+  // 交易類型一律只列本攤位允許的（不再有全交易測試模式 footgun）
+  List<TxnType> get _allowed => _stall.txns;
 
   // 特殊攤位走專屬畫面（非標準掃卡流程）
   bool get _isCasino =>
@@ -331,10 +331,6 @@ class _ScanScreenState extends State<ScanScreen> {
           const SizedBox(width: 8),
           Text('本攤位：${_stall.label}',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          if (Settings.instance.allTxnMode) ...[
-            const SizedBox(width: 8),
-            const Text('[全交易測試]', style: TextStyle(fontSize: 12, color: Colors.amberAccent)),
-          ],
         ]),
       );
 

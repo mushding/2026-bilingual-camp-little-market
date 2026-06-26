@@ -12,16 +12,13 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _code = TextEditingController();
   late String _stallId;
-  late bool _allTxn;
   bool _enrolling = false;
   String _day = '';  // 目前天（後端），用來過濾攤位下拉
 
   @override
   void initState() {
     super.initState();
-    final s = Settings.instance;
-    _stallId = s.stallId;
-    _allTxn = s.allTxnMode;
+    _stallId = Settings.instance.stallId;
     _loadDay();
   }
 
@@ -71,9 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _save() async {
-    final s = Settings.instance;
-    await s.setStallId(_stallId);
-    await s.setAllTxnMode(_allTxn);
+    await Settings.instance.setStallId(_stallId);
     if (!mounted) return;
     Navigator.pop(context);
   }
@@ -139,13 +134,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   .map((st) => DropdownMenuItem(value: st.id, child: Text('${st.label}  (${st.id})')))
                   .toList(),
               onChanged: (v) => setState(() => _stallId = v ?? _stallId),
-            ),
-            const SizedBox(height: 12),
-            SwitchListTile(
-              title: const Text('全交易測試模式'),
-              subtitle: const Text('主畫面列出全部交易（測試/總控用）'),
-              value: _allTxn,
-              onChanged: (v) => setState(() => _allTxn = v),
             ),
             const SizedBox(height: 24),
             FilledButton(

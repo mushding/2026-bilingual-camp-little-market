@@ -55,6 +55,3 @@ Stall stallById(String id) =>
 /// 某一天可用的攤位（給設定畫面下拉同步）。
 List<Stall> stallsForDay(String day) =>
     kStalls.where((s) => s.days.contains(day)).toList();
-
-/// 「全部交易」測試模式用：所有 TxnType。
-final List<TxnType> kAllTxns = TxnType.values;

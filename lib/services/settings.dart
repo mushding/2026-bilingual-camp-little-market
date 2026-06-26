@@ -12,7 +12,6 @@ class Settings {
   static const _kStallId = 'stall_id';
   static const _kDeviceId = 'device_id';
   static const _kScope = 'scope';
-  static const _kAllTxnMode = 'all_txn_mode';
   static const _kTokenSecure = 'api_token';
 
   late SharedPreferences _prefs;
@@ -26,7 +25,6 @@ class Settings {
   String deviceId = '';
   String apiToken = '';     // Bearer，存 secure storage
   String scope = '';        // 'admin' | 'staff' | ''（未註冊）
-  bool allTxnMode = false;  // 主畫面列出全部交易（測試）
 
   bool get isAdmin => scope == 'admin';
   bool get enrolled => apiToken.isNotEmpty;
@@ -35,7 +33,6 @@ class Settings {
     _prefs = await SharedPreferences.getInstance();
     stallId = _prefs.getString(_kStallId) ?? stallId;
     scope = _prefs.getString(_kScope) ?? scope;
-    allTxnMode = _prefs.getBool(_kAllTxnMode) ?? allTxnMode;
     apiToken = await _secure.read(key: _kTokenSecure) ?? '';
     deviceId = _prefs.getString(_kDeviceId) ?? '';
     if (deviceId.isEmpty) {
@@ -63,10 +60,5 @@ class Settings {
     scope = '';
     await _secure.delete(key: _kTokenSecure);
     await _prefs.remove(_kScope);
-  }
-
-  Future<void> setAllTxnMode(bool v) async {
-    allTxnMode = v;
-    await _prefs.setBool(_kAllTxnMode, v);
   }
 }
