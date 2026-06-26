@@ -204,6 +204,33 @@ curl -F file=@students.csv http://104.199.226.128:8080/api/admin/import
 
 ---
 
+## 安全：Cloudflare Tunnel + API 驗證（已上線）
+
+**外部入口 = `https://bilingual.smsk.church`**（不再用 IP）。架構：
+
+```
+App ──HTTPS+Bearer──► Cloudflare 邊緣(TLS/DDoS) ──tunnel──► cloudflared(VM) ──localhost:8080──► FastAPI
+直打 104.199.226.128:8080 ──► 被 deny-public-8080 封鎖
+```
+
+- **Cloudflare Tunnel**：VM 跑 `cloudflared`（systemd），token 式 remote-managed tunnel `flyyoung`，
+  Public Hostname `bilingual.smsk.church → http://localhost:8080`。VM 主動外連，origin IP 隱形。
+  - 重裝/換 VM：`sudo cloudflared service install <TUNNEL_TOKEN>`（token 在 CF Zero Trust → Tunnels）。
+- **8080 對外封死**：firewall `deny-public-8080`（priority 100, DENY tcp:8080）+ VM tag `lock8080`。
+  tunnel 是 outbound 不受影響；CICD 用 VM localhost 也不受影響。
+- **API 驗證**：所有 `/api/*` 需 `Authorization: Bearer <token>`；`/api/admin/*` 與報表需 `admin` scope。
+  - 設定碼換 token：`POST /api/auth/enroll {code, label}` → `{token, scope}`。
+  - 設定碼存 VM `/etc/flyyoung.env`（GitHub secrets `ENROLL_ADMIN_CODE`/`ENROLL_STAFF_CODE` 由 CICD 注入）。
+  - DB 只存 token 的 sha256；App 存 Keychain/Keystore。
+  - 撤銷遺失手機：`POST /api/admin/revoke {label}` 或 `{token}`（需 admin）。
+
+**每支關主手機設定一次：** App 設定 → 輸入設定碼（總控發）→ 註冊 → 選攤位 → 綁關主 UID。
+總控那台用 admin 設定碼（才看得到管理畫面），其餘用 staff 設定碼。
+
+> 換設定碼：改 GitHub secret → 重跑 workflow（會重寫 `/etc/flyyoung.env` + 重啟）。舊 token 仍有效，要逐一 revoke 或清 DB。
+
+---
+
 ## 3. 本機跑 backend（開發 / 現場備援）
 
 ```bash
