@@ -13,6 +13,7 @@ class AdminScreen extends StatefulWidget {
 class _AdminScreenState extends State<AdminScreen> {
   Map<String, dynamic>? _state;
   bool _busy = false;
+  bool _scanning = false;
 
   @override
   void initState() {
@@ -67,8 +68,10 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Future<void> _readUid() async {
+    setState(() => _scanning = true);
     final uid = await NfcService.readUidOnce();
     if (!mounted) return;
+    setState(() => _scanning = false);
     if (uid == null) {
       _snack('掃描取消或 NFC 不可用', false);
       return;
@@ -177,11 +180,15 @@ class _AdminScreenState extends State<AdminScreen> {
               style: TextStyle(fontSize: 12, color: Colors.grey)),
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: _busy ? null : _readUid,
-            icon: const Icon(Icons.nfc),
-            label: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
-              child: Text('掃卡讀 UID', style: TextStyle(fontSize: 16)),
+            onPressed: _busy || _scanning ? null : _readUid,
+            icon: _scanning
+                ? const SizedBox(
+                    width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.nfc),
+            label: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(_scanning ? '感應中…請靠近卡片' : '掃卡讀 UID',
+                  style: const TextStyle(fontSize: 16)),
             ),
           ),
         ]),

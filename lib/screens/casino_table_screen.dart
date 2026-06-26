@@ -24,6 +24,7 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
   int _d1 = 1, _d2 = 1;
   final Map<String, bool> _wins = {}; // 21: uid -> win
   bool _busy = false;
+  bool _scanning = false;  // NFC session 開著（讓按鈕顯示「感應中…」）
 
   bool get _isDice => widget.table == 'dice';
 
@@ -56,7 +57,9 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
   }
 
   Future<void> _addPlayer() async {
+    setState(() => _scanning = true);
     final uid = await NfcService.readUidOnce();
+    if (mounted) setState(() => _scanning = false);
     if (uid == null) return;
 
     String betType = '21:play';
@@ -183,10 +186,14 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
           Row(children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _busy || _bets.length >= 6 ? null : _addPlayer,
-                icon: const Icon(Icons.nfc),
-                label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12), child: Text('感應加人')),
+                onPressed: _busy || _scanning || _bets.length >= 6 ? null : _addPlayer,
+                icon: _scanning
+                    ? const SizedBox(
+                        width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.nfc),
+                label: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(_scanning ? '感應中…請靠近卡片' : '感應加人')),
               ),
             ),
             const SizedBox(width: 8),
