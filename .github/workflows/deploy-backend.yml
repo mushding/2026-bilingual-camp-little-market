@@ -1,7 +1,7 @@
 name: Deploy backend to GCE VM
 
-# push 到 main 動到 backend/ 時，SSH 進既有 VM → git pull → 重啟 systemd 服務。
-# 走 gcloud compute ssh + IAP 隧道：VM 不需公開 IP、不必開 22 port 給全世界。
+# push 到 main 動到 backend/ 時，SSH 進既有 VM（IAP 隧道）→ 首跑自動 bootstrap
+# (clone + venv + systemd)，之後每次 git pull + 重啟。VM 不需公開 22 port。
 on:
   push:
     branches: [main]
@@ -10,15 +10,15 @@ on:
 
 env:
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-  ZONE: ${{ vars.GCP_ZONE }}              # 例：asia-east1-c
-  VM: ${{ vars.GCP_VM_NAME }}             # 例：bilingual-camp-little-market-backend-2026
+  ZONE: ${{ vars.GCP_ZONE }}
+  VM: ${{ vars.GCP_VM_NAME }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write                      # WIF
+      id-token: write
     steps:
       - id: auth
         uses: google-github-actions/auth@v2
@@ -28,16 +28,38 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: SSH deploy
+      - name: SSH bootstrap + deploy
         run: |
           gcloud compute ssh "$VM" \
             --zone "$ZONE" --project "$PROJECT_ID" --tunnel-through-iap \
-            --command 'set -e
-              cd ~/2026-bilingual-camp-little-market
-              git pull --ff-only
-              cd backend
+            --command '
+              set -e
+              REPO=https://github.com/mushding/2026-bilingual-camp-little-market.git
+              DIR="$HOME/2026-bilingual-camp-little-market"
+              sudo apt-get update -qq && sudo apt-get install -y -qq git python3-venv >/dev/null
+              [ -d "$DIR/.git" ] || git clone "$REPO" "$DIR"
+              cd "$DIR" && git pull --ff-only
+              cd "$DIR/backend"
+              [ -d .venv ] || python3 -m venv .venv
               . .venv/bin/activate
               pip install -q -r requirements.txt
-              python -m pytest -q tests/ || python tests/test_economy.py
+              python tests/test_economy.py
+              printf "%s\n" \
+                "[Unit]" \
+                "Description=Flyyoung 小市集 backend" \
+                "After=network.target" \
+                "[Service]" \
+                "User=$(whoami)" \
+                "WorkingDirectory=$DIR/backend" \
+                "Environment=DATABASE_URL=sqlite:///$HOME/flyyoung.db" \
+                "ExecStart=$DIR/backend/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 8080" \
+                "Restart=always" \
+                "[Install]" \
+                "WantedBy=multi-user.target" \
+                | sudo tee /etc/systemd/system/flyyoung-backend.service >/dev/null
+              sudo systemctl daemon-reload
+              sudo systemctl enable flyyoung-backend
               sudo systemctl restart flyyoung-backend
-              echo "deployed: $(git rev-parse --short HEAD)"'
+              sleep 2
+              curl -sf http://localhost:8080/health && echo " deployed $(git rev-parse --short HEAD)"
+            '
