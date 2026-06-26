@@ -97,7 +97,7 @@ class _MailScreenState extends State<MailScreen> {
               FilledButton(onPressed: _busy ? null : _search, child: const Text('搜尋')),
             ]),
             const SizedBox(height: 8),
-            const Text('紙本卡無 UID，依名字反查；同名請以小組/座號核對選對人',
+            const Text('紙本卡無 UID，依名字反查（可打部分字）；同名請以小組/座號核對選對人',
                 style: TextStyle(fontSize: 12, color: Colors.white38)),
             const SizedBox(height: 12),
             Expanded(child: _list()),

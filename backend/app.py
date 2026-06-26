@@ -80,10 +80,15 @@ def scan(req: schemas.ScanReq):
 # ── 郵政 by-name 反查 ───────────────────────────────────────────────────
 @app.get("/api/students/search")
 def students_search(name: str = Query(...)):
+    """模糊搜尋：名字含 query 子字串即回（不用打全名）。"""
     from sqlalchemy import select
     from models import Student
+    q = name.strip()
     with SessionLocal() as s:
-        rows = s.scalars(select(Student).where(Student.name == name)).all()
+        stmt = select(Student)
+        if q:
+            stmt = stmt.where(Student.name.contains(q))
+        rows = s.scalars(stmt.order_by(Student.name).limit(50)).all()
         return [{"uid": r.uid, "name": r.name, "group": r.group, "seat_no": r.seat_no}
                 for r in rows]
 
