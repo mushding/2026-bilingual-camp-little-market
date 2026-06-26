@@ -56,8 +56,8 @@ def test_debit_and_insufficient():
 
 def test_exchange_points():
     fresh_state(); add_student("B", 1000)
-    r = scan(uid="B", stall_id="exchange", action="exchange_points", tier=800)
-    assert r["points"] == TIER_MAP[800] == 1000 and r["balance"] == 200
+    r = scan(uid="B", stall_id="exchange", action="exchange_points", tier=750)
+    assert r["points"] == TIER_MAP[750] == 1000 and r["balance"] == 250
 
 
 def test_donate_kp_no_d3_bonus():

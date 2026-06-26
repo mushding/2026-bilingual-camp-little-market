@@ -73,7 +73,7 @@ class ScanReq(BaseModel):
     # 選用
     cost: int = 0         # game_settle 用
     reward: int = 0       # game_settle 用
-    tier: int | None = None     # exchange_points 檔位 (100/250/400/800)
+    tier: int | None = None     # exchange_points 檔位 (100/250/400/750)
     cards: int = 0        # mail_kp 郵政核銷卡數（寄件人）
     sender_name: str | None = None  # mail_kp 用：寄件人名字（非 NFC 流程，亦可改帶 uid）
     staff_uid: str | None = None  # witness / 防作弊
@@ -93,13 +93,13 @@ class ScanReq(BaseModel):
 | `withdraw` | deposit_balance -= amount；balance += amount（amount=-1 代表全部） | amount≤deposit_balance、market_open |
 | `credit_kp` | kingdom_points += amount（見證固定 100） | **去重** `witness_log` unique(student_uid, staff_uid)；已給 → ok=false |
 | `donate` | balance -= amount；kingdom_points += amount；D3 且 amount≥100 且本生未領 bonus → 額外 +50 KP | amount≥10、balance≥amount、market_open |
-| `exchange_points` | balance -= tier；points += TIER_MAP[tier] | tier∈{100,250,400,800}、balance≥tier、market_open |
+| `exchange_points` | balance -= tier；points += TIER_MAP[tier] | tier∈{100,250,400,750}、balance≥tier、market_open |
 | `guild_draw` | balance -= 30，隨機派任務（見 §3） | balance≥30、market_open、覆蓋舊 pending |
 
 **積分兌換對照表**
 
 ```python
-TIER_MAP = {100:100, 250:300, 400:500, 800:1000}
+TIER_MAP = {100:100, 250:300, 400:500, 750:1000}
 ```
 
 ### 2.3 感謝卡 KP（郵政核銷，加給寄件人）

@@ -94,7 +94,7 @@ enum TxnType {
 | `SettingsScreen`（沿用+擴充） | `screens/settings_screen.dart` | backend url + **本攤位選擇** + 全交易測試開關 |
 | `StudentCard`（元件） | `widgets/student_card.dart` | 顯示 中文名/餘額/積分/天國點數/定存本利 |
 | `AmountInputSheet`（元件） | `widgets/amount_input_sheet.dart` | 通用金額/數量輸入 bottom sheet |
-| `ExchangePicker`（元件） | `widgets/exchange_picker.dart` | 積分兌換檔位（100/250/400/800）選擇 |
+| `ExchangePicker`（元件） | `widgets/exchange_picker.dart` | 積分兌換檔位（100/250/400/750）選擇 |
 | `CasinoTableScreen` | `screens/casino_table_screen.dart` | 賭場多步驟：湊桌→壓注→結算（見 §4） |
 | `GuildPendingScreen` | `screens/guild_pending_screen.dart` | 小遊戲攤：列 pending 名單 → 點完成 |
 
@@ -144,7 +144,7 @@ ScanScreen
 | `bankWithdraw` | 是 | 金額 sheet（含「全部」鍵） | `{action:withdraw, amount}` |
 | `witness` | 否 | — | `{action:credit_kp, amount:100}`（後端帶 staff_uid 去重） |
 | `donation` | 是 | 金額 sheet（下限 10；D3 提示「≥100 額外+50KP」） | `{action:donate, amount}` |
-| `exchange` | 是 | `ExchangePicker` 100/250/400/800 可多次 | `{action:exchange_points, amount:tier}` |
+| `exchange` | 是 | `ExchangePicker` 100/250/400/750 可多次 | `{action:exchange_points, amount:tier}` |
 | `grocery` | 是 | 售價 sheet（含感謝卡商品） | `{action:debit, amount}`（**純扣款，不再帶 cards、不加任何 KP**） |
 | `mailKp` | 是 | **非 NFC**：名字搜尋框 → 候選清單（同名顯示小組消歧）選定學生 → 「卡數 1–3」 | `{action:mail_kp, sender_name 或 uid, cards:n}`（後端 name→uid 反查，kingdom_points += 20×n，受 `card_count≤3`） |
 | `meal` | 是 | 金額 sheet（預設鍵 150，範圍 100–250） | `{action:meal, amount}`（debit，計入 total_expense） |

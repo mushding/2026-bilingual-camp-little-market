@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// 積分兌換檔位選擇。tier → points：100→100, 250→300, 400→500, 800→1000。
+/// 積分兌換檔位選擇。tier → points：100→100, 250→300, 400→500, 750→1000。
 /// 回傳選定 tier（取消回 null）。
 Future<int?> showExchangePicker(BuildContext context) {
-  const tiers = {100: 100, 250: 300, 400: 500, 800: 1000};
+  const tiers = {100: 100, 250: 300, 400: 500, 750: 1000};
   return showModalBottomSheet<int>(
     context: context,
     builder: (ctx) => SafeArea(
