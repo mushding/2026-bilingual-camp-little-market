@@ -22,6 +22,7 @@
 - [app/30-App設計.md](app/30-App設計.md)：前端 App（Android）的畫面、操作流程與刷卡互動設計。
 - [app/31-Backend設計.md](app/31-Backend設計.md)：後端服務架構、API 與結算邏輯設計。
 - [app/32-資料模型與交易類型.md](app/32-資料模型與交易類型.md)：資料表結構、欄位定義與各種交易類型規格。
+- [app/33-架構與部署.md](app/33-架構與部署.md)：系統架構 / CICD / 請求流 / 狀態機 Mermaid 圖 + 現行基礎設施 live facts（docs as code）。
 
 ---
 
