@@ -131,6 +131,9 @@ class ApiClient {
   static Future<Map<String, dynamic>> adminMarketClose() =>
       _post('/api/admin/market_close', {});
 
+  static Future<Map<String, dynamic>> adminReset() =>
+      _post('/api/admin/reset', {});
+
   /// 任何已註冊裝置可讀（目前天 + 市場開關）。
   static Future<Map<String, dynamic>> appState() async =>
       await _get('/api/state') as Map<String, dynamic>;

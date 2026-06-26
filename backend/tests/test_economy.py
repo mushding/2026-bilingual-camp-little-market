@@ -166,6 +166,23 @@ def test_guild_complete_matches_stall():
     assert r["ok"] is True and r["balance"] == 590  # +90
 
 
+def test_reset_all():
+    import models
+    from services import bank
+    fresh_state(day="D3"); add_student("RST", 500)
+    scan(uid="RST", stall_id="grocery", action="debit", amount=100)  # bal 400
+    scan(uid="RST", stall_id="donation", action="donate", amount=50)  # kp 50
+    with S.begin() as s:
+        out = bank.reset_all(s)
+    assert out["ok"] and out["students_reset"] >= 1
+    with S.begin() as s:
+        r = s.get(models.Student, "RST")
+        assert r.balance == 500 and r.points == 0 and r.kingdom_points == 0
+        st = s.get(models.GameState, 1)
+        assert st.current_day == "D1" and st.market_open == 1
+        assert s.scalars(__import__("sqlalchemy").select(models.Transaction)).first() is None
+
+
 def test_auth_enroll_verify_revoke():
     import auth
     with S.begin() as s:

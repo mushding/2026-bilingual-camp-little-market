@@ -175,6 +175,27 @@ class _AdminScreenState extends State<AdminScreen> {
             ),
           ),
           const Divider(height: 32),
+          const Text('全重置 reset（測試用，不可復原）', style: _h),
+          const Text('學員回起始金、清空所有交易/任務/賭局/見證、天數回 D1、市場重開。保留名單與註冊。',
+              style: TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: Colors.deepOrange.shade700),
+            onPressed: _busy
+                ? null
+                : () async {
+                    if (await _confirm('⚠️ 全重置',
+                        '所有學員回起始金、清空所有帳本與遊戲狀態、天數回 D1、市場重開。\n保留學員名單與裝置註冊。不可復原。確定？')) {
+                      await _run(() => ApiClient.adminReset(), '全重置');
+                    }
+                  },
+            icon: const Icon(Icons.cleaning_services),
+            label: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('🧹 Reset All', style: TextStyle(fontSize: 16)),
+            ),
+          ),
+          const Divider(height: 32),
           const Text('讀卡 UID（綁卡/建名單用）', style: _h),
           const Text('感應 NTAG → 顯示 UID，可複製。',
               style: TextStyle(fontSize: 12, color: Colors.grey)),

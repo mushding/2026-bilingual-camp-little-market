@@ -2,10 +2,11 @@
 import json
 import math
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from constants import DEPOSIT_RATE, MARKET_CLOSE_RATE, MAX_SETTLEMENTS
-from models import GameState, Student
+from models import (CasinoBet, CasinoRound, GameState, GuildTask, Student,
+                    Transaction, WitnessLog)
 from services.txn import get_state, write_txn
 
 
@@ -57,6 +58,31 @@ def market_close(session) -> dict:
         affected += 1
     st.market_open = 0
     return {"ok": True, "students": affected, "market_open": False}
+
+
+def reset_all(session) -> dict:
+    """測試用全重置：學員回起始金、清空所有帳本/任務/賭局/見證、天數回 D1、市場重開。
+    保留學員名單與裝置註冊（device_tokens）。不可復原。"""
+    n = 0
+    for s in session.scalars(select(Student)):
+        s.balance = s.seed_amount
+        s.points = 0
+        s.kingdom_points = 0
+        s.deposit_balance = 0
+        s.card_count = 0
+        s.d3_donate_bonus = 0
+        s.response_card = 0
+        s.final_rank_points = None
+        s.final_rank_kp = None
+        n += 1
+    for model in (Transaction, GuildTask, CasinoBet, CasinoRound, WitnessLog):
+        session.execute(delete(model))
+    st = get_state(session)
+    st.current_day = "D1"
+    st.market_open = 1
+    st.settlement_count = 0
+    st.settled_days = "[]"
+    return {"ok": True, "students_reset": n}
 
 
 def admin_state(session) -> dict:

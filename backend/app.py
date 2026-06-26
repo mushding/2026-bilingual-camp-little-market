@@ -159,6 +159,12 @@ def admin_market_close():
         return out
 
 
+@app.post("/api/admin/reset")
+def admin_reset():
+    with SessionLocal.begin() as s:
+        return bank.reset_all(s)
+
+
 @app.get("/api/admin/state")
 def admin_get_state():
     with SessionLocal() as s:
