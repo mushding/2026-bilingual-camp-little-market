@@ -13,7 +13,8 @@ class Settings {
 
   late SharedPreferences _prefs;
 
-  String backendUrl = 'http://10.0.2.2:8000'; // Android emulator → host
+  // 預設指向正式 VM；開發/模擬器在設定畫面改成 http://10.0.2.2:8000 即可。
+  String backendUrl = 'http://104.199.226.128:8080';
   String stallId = 'bank';
   String staffUid = '';
   bool adminMode = false;   // 顯示總控畫面
