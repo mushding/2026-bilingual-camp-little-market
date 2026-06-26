@@ -7,7 +7,6 @@ class Settings {
   Settings._();
   static final Settings instance = Settings._();
 
-  static const _kBackendUrl = 'backend_url';
   static const _kStallId = 'stall_id';
   static const _kStaffUid = 'staff_uid';
   static const _kScope = 'scope';
@@ -17,8 +16,9 @@ class Settings {
   late SharedPreferences _prefs;
   final _secure = const FlutterSecureStorage();
 
-  // 預設指向正式域名（走 Cloudflare → HTTPS）；開發/模擬器改 http://10.0.2.2:8000。
-  String backendUrl = 'https://bilingual.smsk.church';
+  // 正式域名（走 Cloudflare → HTTPS）。寫死、無 setter、使用者不可改。
+  // 開發/模擬器要改後端，直接改這一行（例 http://10.0.2.2:8000）後重 build。
+  final String backendUrl = 'https://bilingual.smsk.church';
   String stallId = 'bank';
   String staffUid = '';
   String apiToken = '';     // Bearer，存 secure storage
@@ -30,17 +30,11 @@ class Settings {
 
   Future<void> load() async {
     _prefs = await SharedPreferences.getInstance();
-    backendUrl = _prefs.getString(_kBackendUrl) ?? backendUrl;
     stallId = _prefs.getString(_kStallId) ?? stallId;
     staffUid = _prefs.getString(_kStaffUid) ?? staffUid;
     scope = _prefs.getString(_kScope) ?? scope;
     allTxnMode = _prefs.getBool(_kAllTxnMode) ?? allTxnMode;
     apiToken = await _secure.read(key: _kTokenSecure) ?? '';
-  }
-
-  Future<void> setBackendUrl(String v) async {
-    backendUrl = v.trim();
-    await _prefs.setString(_kBackendUrl, backendUrl);
   }
 
   Future<void> setStallId(String v) async {

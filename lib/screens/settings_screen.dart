@@ -10,7 +10,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late final TextEditingController _url;
   late final TextEditingController _staff;
   final _code = TextEditingController();
   late String _stallId;
@@ -21,7 +20,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     final s = Settings.instance;
-    _url = TextEditingController(text: s.backendUrl);
     _staff = TextEditingController(text: s.staffUid);
     _stallId = s.stallId;
     _allTxn = s.allTxnMode;
@@ -29,7 +27,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
-    _url.dispose();
     _staff.dispose();
     _code.dispose();
     super.dispose();
@@ -42,8 +39,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _enroll() async {
-    // 註冊前先存 URL（enroll 要連對的 backend）
-    await Settings.instance.setBackendUrl(_url.text);
     setState(() => _enrolling = true);
     try {
       final scope = await ApiClient.enroll(_code.text.trim(),
@@ -66,7 +61,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _save() async {
     final s = Settings.instance;
-    await s.setBackendUrl(_url.text);
     await s.setStaffUid(_staff.text);
     await s.setStallId(_stallId);
     await s.setAllTxnMode(_allTxn);
@@ -83,21 +77,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const Text('Backend URL', style: _lbl),
-            TextField(
-              controller: _url,
-              keyboardType: TextInputType.url,
-              autocorrect: false,
-              decoration: const InputDecoration(
-                hintText: 'https://bilingual.smsk.church',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text('正式：https://bilingual.smsk.church。模擬器：http://10.0.2.2:8000',
-                style: TextStyle(fontSize: 12, color: Colors.white38)),
-            const SizedBox(height: 20),
-
             // ── 裝置註冊 ──
             Card(
               color: s.enrolled ? Colors.green.shade900 : Colors.orange.shade900,
