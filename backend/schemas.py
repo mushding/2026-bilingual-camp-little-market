@@ -5,6 +5,7 @@ from pydantic import BaseModel
 class StudentState(BaseModel):
     uid: str
     student_name: str
+    group: str = ""             # 組別
     balance: int
     points: int
     kingdom_points: int
@@ -15,6 +16,8 @@ class StudentState(BaseModel):
     ok: bool = True
     # 選用：公會抽派發遊戲
     assigned_game: str | None = None
+    # 目前待完成的公會任務（含倒數秒數）
+    pending_tasks: list[dict] = []
 
 
 class ScanReq(BaseModel):

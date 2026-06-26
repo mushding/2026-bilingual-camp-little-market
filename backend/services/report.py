@@ -11,8 +11,8 @@ from models import Student, Transaction
 
 # 入帳類 / 出帳類 action 分類（casino_bet/cancel 排除：只是凍結/退款，僅影響餘額曲線）
 INCOME_ACTIONS = {"credit", "guild_complete", "interest"}
-EXPENSE_ACTIONS = {"debit", "meal", "donate", "exchange_points", "guild_draw"}
-KP_ACTIONS = {"donate", "credit_kp", "mail_kp", "response_card"}
+EXPENSE_ACTIONS = {"debit", "meal", "donate", "exchange_points", "guild_draw", "task_expired"}
+KP_ACTIONS = {"donate", "credit_kp", "mail_kp"}
 
 
 def build_data(session, uid: str) -> dict | None:

@@ -64,20 +64,3 @@ def admin_state(session) -> dict:
     return {"current_day": st.current_day, "market_open": bool(st.market_open),
             "settlement_count": st.settlement_count,
             "settled_days": json.loads(st.settled_days or "[]")}
-
-
-def response_card(session, uid: str) -> dict:
-    """D3 回應卡 +200 KP，每生限一次。"""
-    from services.txn import lock_student
-    from constants import RESPONSE_CARD_KP
-    s = lock_student(session, uid)
-    if s is None:
-        return {"ok": False, "message": "查無此卡"}
-    if s.response_card:
-        return {"ok": False, "message": "已領過回應卡"}
-    s.response_card = 1
-    s.kingdom_points += RESPONSE_CARD_KP
-    st = get_state(session)
-    write_txn(session, s, "system", "response_card", RESPONSE_CARD_KP, st.current_day)
-    return {"ok": True, "kingdom_points": s.kingdom_points,
-            "message": f"回應卡 +{RESPONSE_CARD_KP} KP"}

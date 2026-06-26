@@ -91,7 +91,7 @@ def students_search(name: str = Query(...)):
 # ── 公會 ────────────────────────────────────────────────────────────────
 @app.get("/api/guild/pending")
 def guild_pending(stall_id: str = Query(...)):
-    with SessionLocal() as s:
+    with SessionLocal.begin() as s:  # pending 會掃描逾時任務（需可寫）
         return guild.pending(s, stall_id)
 
 
@@ -152,12 +152,6 @@ def admin_market_close():
         if out.get("ok"):
             report.compute_ranks(s)  # 關市後凍結名次
         return out
-
-
-@app.post("/api/admin/response_card")
-def admin_response_card(req: schemas.UidReq):
-    with SessionLocal.begin() as s:
-        return bank.response_card(s, req.uid)
 
 
 @app.get("/api/admin/state")

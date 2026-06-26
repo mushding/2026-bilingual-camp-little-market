@@ -7,12 +7,31 @@ import json
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.orm import object_session
 
-from constants import (DONATE_D3_BONUS, DONATE_D3_BONUS_MIN, GUILD_FEE,
-                       MAIL_CARD_CAP, MAIL_KP, MARKET_CLOSE_RATE, TIER_MAP,
-                       WITNESS_KP)
-from models import GameState, Student, Transaction, WitnessLog
+from constants import (GAMES, MAIL_KP, TASK_TIMEOUT_MIN, TIER_MAP, WITNESS_KP)
+from models import GameState, GuildTask, Student, Transaction, WitnessLog
 from schemas import StudentState
+
+
+def pending_tasks_of(session, uid: str) -> list[dict]:
+    """該生目前 pending 公會任務 + 倒數秒數（給學員卡顯示）。"""
+    if session is None:
+        return []
+    rows = session.scalars(select(GuildTask).where(
+        GuildTask.uid == uid, GuildTask.status == "pending")).all()
+    out = []
+    now = datetime.now(timezone.utc)
+    for t in rows:
+        try:
+            drawn = datetime.fromisoformat(t.drawn_at)
+        except (ValueError, TypeError):
+            drawn = now
+        remaining = TASK_TIMEOUT_MIN * 60 - int((now - drawn).total_seconds())
+        name = GAMES.get(t.game_key, (t.game_key,))[0]
+        out.append({"game_key": t.game_key, "game_name": name,
+                    "reward": t.reward, "remaining_seconds": max(remaining, 0)})
+    return out
 
 
 def now_iso() -> str:
@@ -25,10 +44,13 @@ def get_state(session) -> GameState:
 
 def state_to_out(s: Student, stall: str, action: str, message: str,
                  ok: bool = True, assigned_game: str | None = None) -> StudentState:
+    sess = object_session(s)
     return StudentState(
-        uid=s.uid, student_name=s.name, balance=s.balance, points=s.points,
+        uid=s.uid, student_name=s.name, group=s.group or "",
+        balance=s.balance, points=s.points,
         kingdom_points=s.kingdom_points, deposit_balance=s.deposit_balance,
         stall=stall, action=action, message=message, ok=ok, assigned_game=assigned_game,
+        pending_tasks=pending_tasks_of(sess, s.uid),
     )
 
 
@@ -70,6 +92,10 @@ def handle_scan(session, req) -> StudentState:
     if s is None:
         return err(req.stall_id, req.action, "查無此卡")
 
+    # 每次掃卡先掃描該生逾時的公會任務（逾時 −20、作廢）
+    from services.guild import sweep_expired
+    sweep_expired(session, s, day)
+
     if req.action in NEEDS_MARKET and not st.market_open:
         return state_to_out(s, req.stall_id, req.action, "市場已關閉，僅能查詢", ok=False)
 
@@ -85,15 +111,15 @@ def handle_scan(session, req) -> StudentState:
             return state_to_out(s, req.stall_id, a, f"餘額不足（需 ${req.amount}，有 ${s.balance}）", ok=False)
         s.balance -= req.amount
         write_txn(session, s, req.stall_id, a, -req.amount, day)
-        label = "餐費" if a == "meal" else "扣款"
-        return state_to_out(s, req.stall_id, a, f"{label} ${req.amount} 成功")
+        label = "付餐費" if a == "meal" else "付款"
+        return state_to_out(s, req.stall_id, a, f"學員{label} ${req.amount}")
 
     if a == "credit":
         if req.amount <= 0:
             return state_to_out(s, req.stall_id, a, "金額需 > 0", ok=False)
         s.balance += req.amount
         write_txn(session, s, req.stall_id, a, req.amount, day)
-        return state_to_out(s, req.stall_id, a, f"入帳 ${req.amount}")
+        return state_to_out(s, req.stall_id, a, f"學員入帳 ${req.amount}")
 
     if a == "game_settle":
         cost, reward = req.cost, req.reward
@@ -105,7 +131,8 @@ def handle_scan(session, req) -> StudentState:
         write_txn(session, s, req.stall_id, a, reward - cost, day,
                   {"cost": cost, "reward": reward})
         return state_to_out(s, req.stall_id, a,
-                            f"收 ${cost}，賠 ${reward}" if reward else f"收 ${cost}，未中")
+                            f"收門票 ${cost}，學員賺 ${reward}" if reward
+                            else f"收門票 ${cost}，學員沒中")
 
     if a == "deposit":
         if req.amount <= 0 or s.balance < req.amount:
@@ -113,7 +140,7 @@ def handle_scan(session, req) -> StudentState:
         s.balance -= req.amount
         s.deposit_balance += req.amount
         write_txn(session, s, req.stall_id, a, -req.amount, day)
-        return state_to_out(s, req.stall_id, a, f"定存 ${req.amount} 成功")
+        return state_to_out(s, req.stall_id, a, f"學員定存 ${req.amount}")
 
     if a == "withdraw":
         amt = s.deposit_balance if req.amount == -1 else req.amount
@@ -122,7 +149,7 @@ def handle_scan(session, req) -> StudentState:
         s.deposit_balance -= amt
         s.balance += amt
         write_txn(session, s, req.stall_id, a, amt, day)
-        return state_to_out(s, req.stall_id, a, f"提領本利 ${amt} 成功")
+        return state_to_out(s, req.stall_id, a, f"學員提領本利 ${amt}")
 
     if a == "credit_kp":  # 聽見證 +100，去重
         if not req.staff_uid:
@@ -134,24 +161,17 @@ def handle_scan(session, req) -> StudentState:
         s.kingdom_points += WITNESS_KP
         session.add(WitnessLog(student_uid=s.uid, staff_uid=req.staff_uid, day=day))
         write_txn(session, s, req.stall_id, a, WITNESS_KP, day, {"staff_uid": req.staff_uid})
-        return state_to_out(s, req.stall_id, a, f"聽見證 +{WITNESS_KP} 天國點數")
+        return state_to_out(s, req.stall_id, a, f"學員聽見證 +{WITNESS_KP} 天國點數")
 
-    if a == "donate":
+    if a == "donate":  # 二三天同一套：1:1 轉 KP，無 D3 bonus
         if req.amount < 10:
             return state_to_out(s, req.stall_id, a, "奉獻下限 10", ok=False)
         if s.balance < req.amount:
             return state_to_out(s, req.stall_id, a, "餘額不足", ok=False)
         s.balance -= req.amount
-        kp = req.amount
-        bonus = 0
-        if day == "D3" and req.amount >= DONATE_D3_BONUS_MIN and not s.d3_donate_bonus:
-            bonus = DONATE_D3_BONUS
-            s.d3_donate_bonus = 1
-        s.kingdom_points += kp + bonus
-        write_txn(session, s, req.stall_id, a, -req.amount, day,
-                  {"kp": kp + bonus, "bonus": bonus})
-        msg = f"奉獻 ${req.amount} → +{kp} KP" + (f"（D3 bonus +{bonus}）" if bonus else "")
-        return state_to_out(s, req.stall_id, a, msg)
+        s.kingdom_points += req.amount
+        write_txn(session, s, req.stall_id, a, -req.amount, day, {"kp": req.amount})
+        return state_to_out(s, req.stall_id, a, f"學員奉獻 ${req.amount} → +{req.amount} KP")
 
     if a == "exchange_points":
         tier = req.tier
@@ -163,22 +183,17 @@ def handle_scan(session, req) -> StudentState:
         gained = TIER_MAP[tier]
         s.points += gained
         write_txn(session, s, req.stall_id, a, -tier, day, {"tier": tier, "points": gained})
-        return state_to_out(s, req.stall_id, a, f"兌換 ${tier} → +{gained} 積分")
+        return state_to_out(s, req.stall_id, a, f"學員兌換 ${tier} → +{gained} 積分")
 
-    if a == "mail_kp":  # 郵政感謝卡核銷，加給寄件人（market 不需開）
+    if a == "mail_kp":  # 郵政感謝卡核銷，加給寄件人（不限張數，market 不需開）
         n = req.cards
         if n < 1:
             return state_to_out(s, req.stall_id, a, "卡數需 ≥ 1", ok=False)
-        room = MAIL_CARD_CAP - s.card_count
-        if room <= 0:
-            return state_to_out(s, req.stall_id, a, f"已達上限 {MAIL_CARD_CAP} 張，不再加 KP", ok=False)
-        applied = min(n, room)
-        gained = MAIL_KP * applied
-        s.card_count += applied
+        gained = MAIL_KP * n
+        s.card_count += n
         s.kingdom_points += gained
-        write_txn(session, s, req.stall_id, a, gained, day, {"cards": applied})
-        note = "" if applied == n else f"（超出上限，僅登記 {applied} 張）"
-        return state_to_out(s, req.stall_id, a, f"感謝卡 {applied} 張 → +{gained} KP{note}")
+        write_txn(session, s, req.stall_id, a, gained, day, {"cards": n})
+        return state_to_out(s, req.stall_id, a, f"登記成功：{n} 張感謝卡 → +{gained} KP")
 
     if a == "guild_draw":
         from services.guild import draw  # 延遲匯入避免循環

@@ -4,7 +4,10 @@
 TIER_MAP = {100: 100, 250: 300, 400: 500, 800: 1000}
 
 # 公會
-GUILD_FEE = 30
+GUILD_FEE = 30                  # 每「抽」一次手續費（以抽取次數計，不論手上任務數）
+GUILD_MAX_TASKS = 3             # 最多同時持有 3 個 pending 任務
+TASK_TIMEOUT_MIN = 10          # 每個任務限時 10 分鐘
+TASK_EXPIRE_PENALTY = 20       # 逾時未完成罰 −20 元
 DIFFICULTY_REWARD = {"low": 60, "mid": 90, "high": 130}
 
 # 9 款小遊戲：stall_id -> (game_key, difficulty, reward)
@@ -33,15 +36,11 @@ MARKET_CLOSE_RATE = 0.1     # 未兌換現金 + 定存本利 ×0.1
 MEAL_DEFAULT = 150
 MEAL_MIN, MEAL_MAX = 100, 250
 
-# 感謝卡（郵政核銷，加給寄件人）
+# 感謝卡（郵政核銷，加給寄件人）— 不限張數
 MAIL_KP = 20
-MAIL_CARD_CAP = 3           # 每寄件人封頂 3 張 = 60 KP
 
-# 天國點數
+# 天國點數（二三天同一套算法：無 D3 bonus、無回應卡）
 WITNESS_KP = 100
-DONATE_D3_BONUS = 50        # D3 奉獻 ≥100 額外
-DONATE_D3_BONUS_MIN = 100
-RESPONSE_CARD_KP = 200
 
 # 賭場桌限
 BET_MIN, BET_MAX = 10, 100
