@@ -221,7 +221,7 @@ class _ScanScreenState extends State<ScanScreen> {
       appBar: AppBar(
         title: const Text('小市集 · 攤主端'),
         actions: [
-          if (s.adminMode)
+          if (s.isAdmin)
             IconButton(
               icon: const Icon(Icons.admin_panel_settings),
               onPressed: () => Navigator.push(context,

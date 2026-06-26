@@ -13,7 +13,8 @@ dependencies:
   cupertino_icons: ^1.0.6
   nfc_manager: ^3.5.0      # NTAG UID 讀取（雙平台）
   http: ^1.2.1             # backend HTTP
-  shared_preferences: ^2.2.2  # 設定持久化
+  shared_preferences: ^2.2.2  # 非敏感設定持久化
+  flutter_secure_storage: ^9.2.2  # API token 存 Keychain/Keystore
 
 dev_dependencies:
   flutter_test:

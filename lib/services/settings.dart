@@ -1,6 +1,8 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 攤主端設定 — backend URL、本攤位、關主 UID、總控/全交易開關。
+/// 攤主端設定 — backend URL、本攤位、關主 UID、API token。
+/// 敏感的 API token 存 Keychain/Keystore；其餘存 SharedPreferences。
 class Settings {
   Settings._();
   static final Settings instance = Settings._();
@@ -8,25 +10,32 @@ class Settings {
   static const _kBackendUrl = 'backend_url';
   static const _kStallId = 'stall_id';
   static const _kStaffUid = 'staff_uid';
-  static const _kAdminMode = 'admin_mode';
+  static const _kScope = 'scope';
   static const _kAllTxnMode = 'all_txn_mode';
+  static const _kTokenSecure = 'api_token';
 
   late SharedPreferences _prefs;
+  final _secure = const FlutterSecureStorage();
 
-  // 預設指向正式 VM；開發/模擬器在設定畫面改成 http://10.0.2.2:8000 即可。
-  String backendUrl = 'http://104.199.226.128:8080';
+  // 預設指向正式域名（走 Cloudflare → HTTPS）；開發/模擬器改 http://10.0.2.2:8000。
+  String backendUrl = 'https://bilingual.smsk.church';
   String stallId = 'bank';
   String staffUid = '';
-  bool adminMode = false;   // 顯示總控畫面
+  String apiToken = '';     // Bearer，存 secure storage
+  String scope = '';        // 'admin' | 'staff' | ''（未註冊）
   bool allTxnMode = false;  // 主畫面列出全部交易（測試）
+
+  bool get isAdmin => scope == 'admin';
+  bool get enrolled => apiToken.isNotEmpty;
 
   Future<void> load() async {
     _prefs = await SharedPreferences.getInstance();
     backendUrl = _prefs.getString(_kBackendUrl) ?? backendUrl;
     stallId = _prefs.getString(_kStallId) ?? stallId;
     staffUid = _prefs.getString(_kStaffUid) ?? staffUid;
-    adminMode = _prefs.getBool(_kAdminMode) ?? adminMode;
+    scope = _prefs.getString(_kScope) ?? scope;
     allTxnMode = _prefs.getBool(_kAllTxnMode) ?? allTxnMode;
+    apiToken = await _secure.read(key: _kTokenSecure) ?? '';
   }
 
   Future<void> setBackendUrl(String v) async {
@@ -44,9 +53,18 @@ class Settings {
     await _prefs.setString(_kStaffUid, staffUid);
   }
 
-  Future<void> setAdminMode(bool v) async {
-    adminMode = v;
-    await _prefs.setBool(_kAdminMode, v);
+  Future<void> setToken(String token, String tokenScope) async {
+    apiToken = token;
+    scope = tokenScope;
+    await _secure.write(key: _kTokenSecure, value: token);
+    await _prefs.setString(_kScope, tokenScope);
+  }
+
+  Future<void> clearToken() async {
+    apiToken = '';
+    scope = '';
+    await _secure.delete(key: _kTokenSecure);
+    await _prefs.remove(_kScope);
   }
 
   Future<void> setAllTxnMode(bool v) async {

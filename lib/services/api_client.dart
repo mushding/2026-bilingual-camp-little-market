@@ -6,23 +6,41 @@ import 'settings.dart';
 /// Backend API client。所有方法 5s timeout、非 200 throw。
 class ApiClient {
   static Uri _u(String path) => Uri.parse('${Settings.instance.backendUrl}$path');
-  static const _h = {'Content-Type': 'application/json'};
   static const _t = Duration(seconds: 5);
 
+  static Map<String, String> _headers() {
+    final h = {'Content-Type': 'application/json'};
+    final tok = Settings.instance.apiToken;
+    if (tok.isNotEmpty) h['Authorization'] = 'Bearer $tok';
+    return h;
+  }
+
+  static Never _throw(http.Response res) {
+    if (res.statusCode == 401) throw Exception('未授權：請到設定重新註冊裝置');
+    if (res.statusCode == 403) throw Exception('權限不足（此操作需總控）');
+    throw Exception('HTTP ${res.statusCode}: ${res.body}');
+  }
+
   static Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
-    final res = await http.post(_u(path), headers: _h, body: jsonEncode(body)).timeout(_t);
-    if (res.statusCode != 200) {
-      throw Exception('HTTP ${res.statusCode}: ${res.body}');
-    }
+    final res = await http.post(_u(path), headers: _headers(), body: jsonEncode(body)).timeout(_t);
+    if (res.statusCode != 200) _throw(res);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<dynamic> _get(String path) async {
-    final res = await http.get(_u(path), headers: _h).timeout(_t);
-    if (res.statusCode != 200) {
-      throw Exception('HTTP ${res.statusCode}: ${res.body}');
-    }
+    final res = await http.get(_u(path), headers: _headers()).timeout(_t);
+    if (res.statusCode != 200) _throw(res);
     return jsonDecode(res.body);
+  }
+
+  /// 裝置註冊：設定碼 → token + scope。存進 Settings（secure storage）。
+  static Future<String> enroll(String code, {String label = ''}) async {
+    final r = await _post('/api/auth/enroll', {'code': code, 'label': label});
+    if (r['ok'] != true) {
+      throw Exception(r['message'] ?? '註冊失敗');
+    }
+    await Settings.instance.setToken(r['token'], r['scope']);
+    return r['scope'];
   }
 
   // ── 單學生交易 ───────────────────────────────────────────────────────
