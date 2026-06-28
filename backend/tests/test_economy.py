@@ -55,9 +55,12 @@ def test_debit_and_insufficient():
 
 
 def test_exchange_points():
-    fresh_state(); add_student("B", 1000)
-    r = scan(uid="B", stall_id="exchange", action="exchange_points", tier=750)
-    assert r["points"] == TIER_MAP[750] == 1000 and r["balance"] == 250
+    fresh_state(); add_student("B", 3000)
+    r = scan(uid="B", stall_id="exchange", action="exchange_points", tier=2500)
+    assert r["points"] == TIER_MAP[2500] == 3000 and r["balance"] == 500
+    # 500 小檔（1.0）
+    r2 = scan(uid="B", stall_id="exchange", action="exchange_points", tier=500)
+    assert r2["points"] == 3000 + TIER_MAP[500] == 3500 and r2["balance"] == 0
 
 
 def test_donate_kp_no_d3_bonus():
@@ -70,16 +73,16 @@ def test_donate_kp_no_d3_bonus():
 
 def test_witness_dedup():
     fresh_state(); add_student("D", 500)
-    assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S1")["kingdom_points"] == 100
+    assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S1")["kingdom_points"] == 1000
     assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S1")["ok"] is False
-    assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S2")["kingdom_points"] == 200
+    assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S2")["kingdom_points"] == 2000
 
 
 def test_mail_kp_no_cap():
     fresh_state(); add_student("E", 500)
-    assert scan(uid="E", stall_id="mail", action="mail_kp", cards=2)["kingdom_points"] == 40
+    assert scan(uid="E", stall_id="mail", action="mail_kp", cards=2)["kingdom_points"] == 400
     r = scan(uid="E", stall_id="mail", action="mail_kp", cards=5)  # 不限張數
-    assert r["kingdom_points"] == 140  # 40 + 100
+    assert r["kingdom_points"] == 1400  # 400 + 1000
 
 
 def test_deposit_interest_compound():
@@ -111,34 +114,34 @@ def test_dice_seven_payout():
     with S.begin() as s:
         rid = casino.open_round(s, "dice", "casino_dice")["round_id"]
     with S.begin() as s:
-        casino.bet(s, rid, "H", "seven", 10)
+        casino.bet(s, rid, "H", "seven", 50)
     with S.begin() as s:
         res = casino.settle(s, rid, dice=[3, 4])  # sum 7
     with S.begin() as s:
-        # 凍結 -10，命中 seven 賠 5x = +50，淨 +40 → 500-10+50=540
-        assert s.get(models.Student, "H").balance == 540
+        # 凍結 -50，命中 seven 賠 5x = +250，淨 +200 → 500-50+250=700
+        assert s.get(models.Student, "H").balance == 700
 
 
 def test_guild_draw_fee_and_pending():
-    fresh_state(); add_student("I", 500)
+    fresh_state(); add_student("I", 2000)
     r = scan(uid="I", stall_id="guild", action="guild_draw")
-    assert r["balance"] == 470 and r["assigned_game"]  # 扣 30
+    assert r["balance"] == 1700 and r["assigned_game"]  # 扣 300
     assert len(r["pending_tasks"]) == 1
 
 
 def test_guild_max_3_tasks():
-    fresh_state(); add_student("J", 500)
+    fresh_state(); add_student("J", 2000)
     for _ in range(3):
         scan(uid="J", stall_id="guild", action="guild_draw")
     r4 = scan(uid="J", stall_id="guild", action="guild_draw")  # 第 4 次被擋
-    assert r4["ok"] is False and r4["balance"] == 410  # 只扣了 3 次 30
+    assert r4["ok"] is False and r4["balance"] == 1100  # 只扣了 3 次 300
 
 
 def test_guild_task_timeout_penalty():
     import models
     from datetime import datetime, timedelta, timezone
-    fresh_state(); add_student("K", 500)
-    scan(uid="K", stall_id="guild", action="guild_draw")  # bal 470, 1 task
+    fresh_state(); add_student("K", 2000)
+    scan(uid="K", stall_id="guild", action="guild_draw")  # bal 1700, 1 task
     # 把 drawn_at 改成 11 分鐘前
     from sqlalchemy import select as _sel
     past = (datetime.now(timezone.utc) - timedelta(minutes=11)).isoformat(timespec="seconds")
@@ -146,7 +149,7 @@ def test_guild_task_timeout_penalty():
         t = s.scalars(_sel(models.GuildTask).where(models.GuildTask.uid == "K")).first()
         t.drawn_at = past
     r = scan(uid="K", stall_id="bank", action="lookup")  # 掃卡觸發 sweep
-    assert r["balance"] == 450 and len(r["pending_tasks"]) == 0  # 逾時 −20、作廢
+    assert r["balance"] == 1700 and len(r["pending_tasks"]) == 0  # 逾時作廢、不扣錢（手續費已收）
 
 
 def test_guild_complete_matches_stall():
@@ -157,13 +160,13 @@ def test_guild_complete_matches_stall():
     fresh_state(); add_student("L", 500)
     with S.begin() as s:  # 直接塞一個 game_basketball 的 pending
         s.add(models.GuildTask(uid="L", game_key="game_basketball", difficulty="mid",
-                               reward=90, status="pending", drawn_at=now))
+                               reward=900, status="pending", drawn_at=now))
     with S.begin() as s:
         lst = guild.pending(s, "game_basketball")  # 修正前這裡會是空（bug）
     assert any(x["student_uid"] == "L" for x in lst)
     with S.begin() as s:
         r = guild.complete(s, "L", "game_basketball", "dev").model_dump()
-    assert r["ok"] is True and r["balance"] == 590  # +90
+    assert r["ok"] is True and r["balance"] == 1400  # +900
 
 
 def test_reset_all():

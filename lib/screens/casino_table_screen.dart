@@ -100,7 +100,7 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
       betType = t;
     }
     final amt = await showAmountInput(context,
-        title: '壓注金額 (10–100)', quickKeys: const [10, 20, 50, 100], min: 10, max: 100);
+        title: '壓注金額 (50–500)', quickKeys: const [50, 100, 200, 500], min: 50, max: 500);
     if (amt == null) return;
 
     setState(() => _busy = true);

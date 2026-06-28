@@ -1,9 +1,9 @@
 """公會抽/完成/逾時 — docs/11 B-8（single source）。
 
 規則：
-- 每「抽」一次手續費 30（以抽取次數計，不論手上任務數）。
+- 每「抽」一次手續費 300（以抽取次數計，不論手上任務數）。
 - 最多同時持有 3 個 pending 任務；抽到上限要先完成或讓任務逾時才能再抽。
-- 每個任務限時 10 分鐘；逾時未完成自動作廢並罰 −20 元。
+- 每個任務限時 10 分鐘；逾時未完成自動作廢，**不另外扣錢**（手續費已收）。
 """
 import random
 from datetime import datetime, timezone
@@ -20,7 +20,7 @@ _DIFF_ZH = {"low": "低", "mid": "中", "high": "高"}
 
 
 def sweep_expired(session, s: Student, day: str) -> int:
-    """掃描該生逾時的 pending 任務：作廢 + 罰 −20。回作廢數。s 已鎖。"""
+    """掃描該生逾時的 pending 任務：自動作廢，不另外扣錢（手續費已收）。回作廢數。s 已鎖。"""
     now = datetime.now(timezone.utc)
     expired = 0
     for t in session.scalars(select(GuildTask).where(
@@ -31,8 +31,9 @@ def sweep_expired(session, s: Student, day: str) -> int:
             continue
         if (now - drawn).total_seconds() >= TASK_TIMEOUT_MIN * 60:
             t.status = "expired"
-            penalty = min(TASK_EXPIRE_PENALTY, max(s.balance, 0))
-            s.balance -= penalty
+            penalty = min(TASK_EXPIRE_PENALTY, max(s.balance, 0))  # 預設 0
+            if penalty:
+                s.balance -= penalty
             write_txn(session, s, "guild", "task_expired", -penalty, day,
                       {"game_key": t.game_key, "penalty": penalty})
             expired += 1
@@ -40,7 +41,7 @@ def sweep_expired(session, s: Student, day: str) -> int:
 
 
 def draw(session, s: Student, day: str) -> StudentState:
-    """guild_draw：手續費 30，累加 1 個任務（上限 3，不覆蓋）。s 已鎖。"""
+    """guild_draw：手續費 300，累加 1 個任務（上限 3，不覆蓋）。s 已鎖。"""
     pending_n = session.scalar(select(func.count()).select_from(GuildTask).where(
         GuildTask.uid == s.uid, GuildTask.status == "pending"))
     if pending_n >= GUILD_MAX_TASKS:

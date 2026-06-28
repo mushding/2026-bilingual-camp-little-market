@@ -1,0 +1,28 @@
+PODS:
+  - Flutter (1.0.0)
+  - flutter_secure_storage (6.0.0):
+    - Flutter
+  - nfc_manager (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
+  - nfc_manager (from `.symlinks/plugins/nfc_manager/ios`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  flutter_secure_storage:
+    :path: ".symlinks/plugins/flutter_secure_storage/ios"
+  nfc_manager:
+    :path: ".symlinks/plugins/nfc_manager/ios"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
+  nfc_manager: 9c40fe22528ab871ca11e52ea8b95790e9d92ca2
+
+PODFILE CHECKSUM: c27bdf36c98f5a0efaa160a4ab0ca97a9787fadd
+
+COCOAPODS: 1.16.2

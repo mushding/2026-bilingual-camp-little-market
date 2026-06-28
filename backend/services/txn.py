@@ -164,8 +164,8 @@ def handle_scan(session, req) -> StudentState:
         return state_to_out(s, req.stall_id, a, f"學員聽見證 +{WITNESS_KP} 天國點數")
 
     if a == "donate":  # 二三天同一套：1:1 轉 KP，無 D3 bonus
-        if req.amount < 10:
-            return state_to_out(s, req.stall_id, a, "奉獻下限 10", ok=False)
+        if req.amount < 50:
+            return state_to_out(s, req.stall_id, a, "奉獻下限 50", ok=False)
         if s.balance < req.amount:
             return state_to_out(s, req.stall_id, a, "餘額不足", ok=False)
         s.balance -= req.amount

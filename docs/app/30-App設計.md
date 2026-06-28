@@ -32,7 +32,7 @@
 | `donation` | 舊鞋救命 | `donation` | D2–3 |
 | `exchange` | 積分兌換 | `exchange` | D2–3 |
 | `grocery` | 雜貨店 | `grocery`（純 debit，含感謝卡商品，不加 KP） | D2–3 |
-| `mail` | 郵政 | `mail_kp`（**非 NFC**：名字搜尋寄件人 → 輸入卡數 → +20×n KP） | D2–3 |
+| `mail` | 郵政 | `mail_kp`（**非 NFC**：名字搜尋寄件人 → 輸入卡數 → +200×n KP） | D2–3 |
 | `meal` | 餐費 | `meal`（debit，關主/總控輸入金額或選預設150） | D1–3 |
 | `casino_21` | 賭場21點 | `casino_21`（多步驟） | D2–3 |
 | `casino_dice` | 賭場大小骰子 | `casino_dice`（多步驟） | D2–3 |
@@ -63,11 +63,11 @@ enum TxnType {
   bankWithdraw,      // 提領本利 action=withdraw    input: 金額（或全部）
 
   // ── 天國 / 兌換
-  witness,           // 分享見證 action=credit_kp       +100 固定，無 input（防刷靠後端）
+  witness,           // 分享見證 action=credit_kp       +1000 固定，無 input（防刷靠後端）
   donation,          // 舊鞋救命 action=donate          input: 奉獻金額（cash→KP 1:1）
   exchange,          // 積分     action=exchange_points input: 兌換檔位
   grocery,           // 雜貨店   action=debit           input: 售價（含感謝卡商品；**不加任何 KP**）
-  mailKp,            // 郵政     action=mail_kp         **非 NFC**：input 寄件人名字搜尋 + 卡數 → +20×n KP（加給寄件人）
+  mailKp,            // 郵政     action=mail_kp         **非 NFC**：input 寄件人名字搜尋 + 卡數 → +200×n KP（加給寄件人）
   meal,              // 餐費     action=meal(debit)     input: 餐費金額（預設150，範圍100–250）
 
   // ── 賭場（多步驟，見 §4）
@@ -75,7 +75,7 @@ enum TxnType {
   casinoDice,        // action=casino round         multi-step
 
   // ── 公會
-  guildDraw,         // 公會抽     action=guild_draw      扣30，回傳隨機派發遊戲
+  guildDraw,         // 公會抽     action=guild_draw      扣300，回傳隨機派發遊戲
   guildComplete,     // 小遊戲完成 action=guild_complete  固定獎勵，看 pending 名單
 }
 ```
@@ -94,7 +94,7 @@ enum TxnType {
 | `SettingsScreen`（沿用+擴充） | `screens/settings_screen.dart` | backend url + **本攤位選擇** + 全交易測試開關 |
 | `StudentCard`（元件） | `widgets/student_card.dart` | 顯示 中文名/餘額/積分/天國點數/定存本利 |
 | `AmountInputSheet`（元件） | `widgets/amount_input_sheet.dart` | 通用金額/數量輸入 bottom sheet |
-| `ExchangePicker`（元件） | `widgets/exchange_picker.dart` | 積分兌換檔位（100/250/400/750）選擇 |
+| `ExchangePicker`（元件） | `widgets/exchange_picker.dart` | 積分兌換檔位（500/1000/2500/4000/7500）選擇 |
 | `CasinoTableScreen` | `screens/casino_table_screen.dart` | 賭場多步驟：湊桌→壓注→結算（見 §4） |
 | `GuildPendingScreen` | `screens/guild_pending_screen.dart` | 小遊戲攤：列 pending 名單 → 點完成 |
 
@@ -143,12 +143,12 @@ ScanScreen
 | `bankDeposit` | 是 | 金額 sheet | `{action:deposit, amount}` |
 | `bankWithdraw` | 是 | 金額 sheet（含「全部」鍵） | `{action:withdraw, amount}` |
 | `witness` | 否 | — | `{action:credit_kp, amount:100}`（後端帶 staff_uid 去重） |
-| `donation` | 是 | 金額 sheet（下限 10；D3 提示「≥100 額外+50KP」） | `{action:donate, amount}` |
-| `exchange` | 是 | `ExchangePicker` 100/250/400/750 可多次 | `{action:exchange_points, amount:tier}` |
+| `donation` | 是 | 金額 sheet（下限 50；快捷 100/500/1000） | `{action:donate, amount}` |
+| `exchange` | 是 | `ExchangePicker` 500/1000/2500/4000/7500 可多次 | `{action:exchange_points, amount:tier}` |
 | `grocery` | 是 | 售價 sheet（含感謝卡商品） | `{action:debit, amount}`（**純扣款，不再帶 cards、不加任何 KP**） |
-| `mailKp` | 是 | **非 NFC**：名字搜尋框 → 候選清單（同名顯示小組消歧）選定學生 → 「卡數 1–3」 | `{action:mail_kp, sender_name 或 uid, cards:n}`（後端 name→uid 反查，kingdom_points += 20×n，受 `card_count≤3`） |
+| `mailKp` | 是 | **非 NFC**：名字搜尋框 → 候選清單（同名顯示小組消歧）選定學生 → 「卡數 1–3」 | `{action:mail_kp, sender_name 或 uid, cards:n}`（後端 name→uid 反查，kingdom_points += 200×n，受 `card_count≤3`） |
 | `meal` | 是 | 金額 sheet（預設鍵 150，範圍 100–250） | `{action:meal, amount}`（debit，計入 total_expense） |
-| `guildDraw` | 否（系統固定扣30） | 結果對話框顯示「派發：投籃高手」 | `POST /api/scan {action:guild_draw}` |
+| `guildDraw` | 否（系統固定扣300） | 結果對話框顯示「派發：投籃高手」 | `POST /api/scan {action:guild_draw}` |
 | `guildComplete` | 否 | `GuildPendingScreen` 點名單 | `POST /api/guild/complete {student_uid, stall_id, staff_uid}` |
 | `casino21` / `casinoDice` | 是（多步） | `CasinoTableScreen` | 見 §4 |
 
@@ -158,7 +158,7 @@ ScanScreen
 
 - **`AmountInputSheet`**：大數字鍵盤 + 快捷鍵（攤位相關預設值）+ 即時驗證（>0、≤桌限/≤餘額由後端最終裁定，App 只做基本擋）。
 - **staff_uid**：App 啟動時於 Settings 綁定「本機關主 UID」（同工自己的卡或手動輸入字串），所有 `witness` / `guild_complete` 帶上，供後端去重與防作弊。
-- **郵政 `mail_kp`（唯一非 NFC by-name 流程）**：紙本感謝卡無 UID，**不感應卡**。郵政同工在 app 輸入卡上**寄件人名字**→ 呼叫 by-name lookup（見 backend），回**候選清單**（同名以小組/座號消歧）→ 選定正確學生 → 輸入卡數 1–3 → `mail_kp` 加 +20×n KP 給寄件人。選錯人會加錯 KP，務必核對；沒寫名字的卡無法登記。
+- **郵政 `mail_kp`（唯一非 NFC by-name 流程）**：紙本感謝卡無 UID，**不感應卡**。郵政同工在 app 輸入卡上**寄件人名字**→ 呼叫 by-name lookup（見 backend），回**候選清單**（同名以小組/座號消歧）→ 選定正確學生 → 輸入卡數 1–3 → `mail_kp` 加 +200×n KP 給寄件人。選錯人會加錯 KP，務必核對；沒寫名字的卡無法登記。
 
 ---
 
@@ -174,8 +174,8 @@ ScanScreen
       │
       ▼
 [COLLECT]     反覆：感應學生卡 → 立刻顯示姓名/餘額 → 輸入壓注
-   ┌── 21點：  壓注金額（10–100）
-   └── 大小骰： 壓注內容(大/小/7) + 金額(10–100)
+   ┌── 21點：  壓注金額（50–500）
+   └── 大小骰： 壓注內容(大/小/7) + 金額(50–500)
               每加一人 → POST /api/casino/bet {round_id, uid, bet_type, amount}
               （後端當下凍結/檢查餘額，回 ok 或 餘額不足）
               桌面列出已入座清單（姓名・注別・金額），最多 6 人
@@ -243,8 +243,10 @@ ScanScreen
 | 換日 `set_day` | `POST /api/admin/set_day {day}` | 總控同工 | 每場小市集開始前切到 D1 / D2 / D3 |
 | 每場結息 `settle_interest` | `POST /api/admin/settle_interest {day}` | 總控同工 | **D1（18:10）/ D2（14:00）/ D3（市場關閉時）各場結束各按一次**，全營最多 3 次 |
 | 市場關閉 `market_close` | `POST /api/admin/market_close` | 總控同工 | **D3 約 10:25 突襲**，主持喊停同時執行（一鍵凍結，未兌換現金＋定存本利 ×0.1） |
-| D3 回應卡 `response_card` | `POST /api/admin/response_card {uid}` | 總控同工 / 牧養主持 | D3 結關前，學生填回應卡 +200 KP（每生限一次） |
+| 全重置 `reset` | `POST /api/admin/reset` | 總控同工 | 測試用：學員回起始金、清空帳本/任務/賭局/見證、天數回 D1、市場重開 |
 | 查全域狀態 | `GET /api/admin/state` | 總控同工 | 隨時確認 `current_day` / `market_open` / `settlement_count` |
+
+> 舊版「D3 回應卡 `response_card` +200 KP」已取消（Day3 不加開強化天國攤）。
 
 **形式（二擇一）**
 
@@ -257,6 +259,6 @@ ScanScreen
 
 ## 附錄：交易字串 / action 對照
 
-`Day1賣娃娃`、`Day1套圈圈`、`Day1射飛鏢`、`Day1麻將賓果`、`銀行`(lookup/deposit/withdraw)、`分享見證`(credit_kp +100)、`舊鞋救命`(debit + credit_kp)、`積分`(debit + credit_points)、`雜貨店`(**純 debit，不加 KP**)、`郵政`(mail_kp，名字搜尋寄件人 +20×n KP)、`餐費`(meal debit，約150)、`賭場21點`、`賭場大小骰子`、`公會`(抽取 −30)、`顏色分類`、`終極密碼`、`搬家人工`、`投籃高手`、`丟紙飛機`、`拍氣球`、`比手畫腳`、`記憶翻牌`、`七巧板`（後 9 款：lookup / complete 固定獎勵）。
+`Day1賣娃娃`、`Day1套圈圈`、`Day1射飛鏢`、`Day1麻將賓果`、`銀行`(lookup/deposit/withdraw)、`分享見證`(credit_kp +1000)、`舊鞋救命`(debit + credit_kp)、`積分`(debit + credit_points)、`雜貨店`(**純 debit，不加 KP**)、`郵政`(mail_kp，名字搜尋寄件人 +200×n KP)、`餐費`(meal debit，約150)、`賭場21點`、`賭場大小骰子`、`公會`(抽取 −300)、`顏色分類`、`終極密碼`、`搬家人工`、`投籃高手`、`丟紙飛機`、`拍氣球`、`比手畫腳`、`記憶翻牌`、`七巧板`（後 9 款：lookup / complete 固定獎勵）。
 
-> 後端沿用現有 `POST /api/scan {uid,stall_id,action,amount}`；新增 action：`deposit`、`withdraw`、`credit_kp`、`credit_points`、`meal`（餐費 debit）、`mail_kp`（郵政感謝卡核銷，by-name，+20×n KP）、`complete`（公會固定獎勵）。郵政另需 `GET /api/students/search?name=`（by-name 反查）。所有 state 入後端 DB、原子交易、UID-lookup、**卡片不寫入**。
+> 後端沿用現有 `POST /api/scan {uid,stall_id,action,amount}`；新增 action：`deposit`、`withdraw`、`credit_kp`、`credit_points`、`meal`（餐費 debit）、`mail_kp`（郵政感謝卡核銷，by-name，+200×n KP）、`complete`（公會固定獎勵）。郵政另需 `GET /api/students/search?name=`（by-name 反查）。所有 state 入後端 DB、原子交易、UID-lookup、**卡片不寫入**。

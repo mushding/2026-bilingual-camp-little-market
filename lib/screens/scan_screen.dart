@@ -138,7 +138,7 @@ class _ScanScreenState extends State<ScanScreen> {
       case TxnType.day1SellDoll:
       case TxnType.grocery:
         final v = await showAmountInput(context,
-            title: '${t.label} 售價', quickKeys: const [20, 50, 100], hint: '輸入售價');
+            title: '${t.label} 售價', quickKeys: const [20, 50, 100, 200], hint: '輸入售價（真實物價）');
         if (v == null) return;
         amount = v;
         break;
@@ -151,20 +151,20 @@ class _ScanScreenState extends State<ScanScreen> {
       case TxnType.day1RingToss:
         final n = await showAmountInput(context, title: '中圈數 (0–10)', max: 10, hint: '中幾圈');
         if (n == null) return;
-        cost = 20;
-        reward = (n < 0 ? 0 : n) * 10;
+        cost = 100;
+        reward = (n < 0 ? 0 : n) * 50;
         break;
       case TxnType.day1Dart:
         final n = await showAmountInput(context, title: '命中數 (0–10)', max: 10, hint: '命中幾鏢');
         if (n == null) return;
-        cost = 20;
-        reward = (n < 0 ? 0 : n) * 5;
+        cost = 100;
+        reward = (n < 0 ? 0 : n) * 25;
         break;
       case TxnType.day1Bingo:
         final win = await _bingoResult();
         if (win == null) return;
-        cost = 20;
-        reward = win ? 300 : 0;
+        cost = 100;
+        reward = win ? 1500 : 0;
         break;
       case TxnType.bankDeposit:
         final v = await showAmountInput(context, title: '定存金額', hint: '存多少');
@@ -178,7 +178,7 @@ class _ScanScreenState extends State<ScanScreen> {
         break;
       case TxnType.donation:
         final v = await showAmountInput(context,
-            title: '奉獻金額', min: 10, hint: '現金 1:1 轉天國點數');
+            title: '奉獻金額', min: 50, quickKeys: const [100, 500, 1000], hint: '現金 1:1 轉天國點數');
         if (v == null) return;
         amount = v;
         break;
@@ -253,7 +253,7 @@ class _ScanScreenState extends State<ScanScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('麻將賓果結果'),
-          content: const Text('任一連線即中（賠 300）'),
+          content: const Text('任一連線即中（賠 1500）'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('未中')),
             FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('中獎')),
