@@ -6,8 +6,12 @@
 """
 from contextlib import asynccontextmanager
 
+import os
+
 from fastapi import FastAPI, HTTPException, Query, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+
+WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 
 import auth
 import schemas
@@ -32,7 +36,8 @@ ADMIN_PREFIXES = ("/api/admin/", "/api/report")
 async def require_token(request: Request, call_next):
     """Bearer token 驗證。/health 與 /api/auth/enroll 免驗；/api/admin/* 與報表需 admin。"""
     path = request.url.path
-    if path in ("/health",) or path.startswith("/api/auth/enroll"):
+    # 後台 Web UI 外殼（HTML，瀏覽器直開、無 header）免驗；其 API 呼叫仍帶 Bearer。
+    if path in ("/health", "/admin") or path.startswith("/api/auth/enroll"):
         return await call_next(request)
 
     hdr = request.headers.get("authorization", "")
@@ -171,6 +176,19 @@ def admin_get_state():
         return bank.admin_state(s)
 
 
+@app.get("/api/admin/dashboard")
+def admin_dashboard():
+    """後台即時總覽：全域狀態 + 全部學生現況 + 彙總。Web 後台每隔幾秒輪詢。"""
+    with SessionLocal() as s:
+        return bank.dashboard(s)
+
+
+# ── Web 後台（電腦用，serve 在 /admin） ──────────────────────────────────
+@app.get("/admin", response_class=HTMLResponse)
+def web_admin():
+    return FileResponse(os.path.join(WEB_DIR, "admin.html"))
+
+
 @app.get("/api/state")
 def public_state():
     """任何已註冊裝置可讀：目前天 + 市場開關（給 App 過濾攤位/輪詢關市）。"""
@@ -219,6 +237,18 @@ async def admin_import(file: UploadFile):
 
 
 # ── 報表 ────────────────────────────────────────────────────────────────
+@app.get("/api/report/all/print", response_class=HTMLResponse)
+def report_all_print():
+    """全部學生成績單一份 HTML（每人一張 A4，page-break）。瀏覽器 Ctrl+P → 存 PDF/印。"""
+    from sqlalchemy import select
+    from models import Student
+    with SessionLocal() as s:
+        uids = s.scalars(select(Student).order_by(Student.final_rank_points,
+                                                  Student.name)).all()
+        datas = [report.build_data(s, x.uid) for x in uids]
+        return report.render_all([d for d in datas if d])
+
+
 @app.get("/api/report/{uid}/data")
 def report_data(uid: str):
     with SessionLocal() as s:

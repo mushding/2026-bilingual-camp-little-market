@@ -90,3 +90,30 @@ def admin_state(session) -> dict:
     return {"current_day": st.current_day, "market_open": bool(st.market_open),
             "settlement_count": st.settlement_count,
             "settled_days": json.loads(st.settled_days or "[]")}
+
+
+def dashboard(session) -> dict:
+    """後台即時總覽：全域狀態 + 每位學生現況 + 彙總。"""
+    studs = session.scalars(select(Student).order_by(Student.points.desc())).all()
+    # pending 任務數（一次查全部，避免 N+1）
+    pend: dict[str, int] = {}
+    for t in session.scalars(select(GuildTask).where(GuildTask.status == "pending")):
+        pend[t.uid] = pend.get(t.uid, 0) + 1
+    rows = [{
+        "uid": s.uid, "name": s.name, "group": s.group, "seat_no": s.seat_no,
+        "seed": s.seed_amount, "balance": s.balance, "deposit": s.deposit_balance,
+        "asset": s.balance + s.deposit_balance,
+        "points": s.points, "kingdom_points": s.kingdom_points,
+        "card_count": s.card_count, "pending_tasks": pend.get(s.uid, 0),
+    } for s in studs]
+    total_asset = sum(r["asset"] for r in rows)
+    return {
+        "state": admin_state(session),
+        "students": rows,
+        "summary": {
+            "n_students": len(rows),
+            "total_asset": total_asset,
+            "total_points": sum(r["points"] for r in rows),
+            "total_kp": sum(r["kingdom_points"] for r in rows),
+        },
+    }

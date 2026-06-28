@@ -99,7 +99,30 @@ def _svg_line(points: list[int], color: str, w=520, h=120, pad=10) -> str:
             f'<text x="{pad}" y="{h-2}" font-size="10" fill="#888">min {lo}</text></svg>')
 
 
-def render_html(data: dict) -> str:
+_STYLE = """
+@page { size:A4; margin:14mm; }
+body { font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; color:#222; margin:0; }
+.page { padding:0; }
+.page + .page { page-break-before:always; }
+h1 { font-size:22px; margin:0 0 2px; }
+.sub { color:#888; font-size:12px; }
+.tracks { display:flex; gap:16px; margin:14px 0; }
+.track { flex:1; border:2px solid #1a4d2e; border-radius:8px; padding:12px; }
+.track.kp { border-color:#7a4ea0; }
+.big { font-size:30px; font-weight:700; }
+.kpis { display:flex; flex-wrap:wrap; gap:10px; margin:10px 0; }
+.kpi { background:#f2f2f2; border-radius:6px; padding:8px 12px; min-width:110px; }
+.kpi .l { font-size:11px; color:#777; } .kpi .v { font-size:18px; font-weight:600; }
+.chart { margin:8px 0; } .chart h3 { font-size:13px; margin:6px 0; color:#555; }
+table { border-collapse:collapse; width:100%; font-size:11px; margin-top:8px; }
+td,th { border-bottom:1px solid #eee; padding:3px 6px; }
+th { background:#1a4d2e; color:#fff; text-align:left; }
+.msg { margin-top:16px; padding:12px; background:#fff8e1; border-left:4px solid #f0b400; font-size:13px; }
+"""
+
+
+def _render_body(data: dict) -> str:
+    """單張成績單內容（不含 <html>/<head>），供單張與批次列印共用。"""
     esc = lambda x: html.escape(str(x))
     assets = [p["balance"] + p["deposit"] for p in data["balance_curve"]] or [0]
     deposits = [p["deposit"] for p in data["balance_curve"]] or [0]
@@ -116,25 +139,7 @@ def render_html(data: dict) -> str:
     )
     rp = data["rank_points"] or "-"
     rk = data["rank_kp"] or "-"
-    return f"""<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
-<title>{esc(data['name'])} · 小市集成績單</title>
-<style>
-@page {{ size:A4; margin:14mm; }}
-body {{ font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; color:#222; }}
-h1 {{ font-size:22px; margin:0 0 2px; }} .sub {{ color:#888; font-size:12px; }}
-.tracks {{ display:flex; gap:16px; margin:14px 0; }}
-.track {{ flex:1; border:2px solid #1a4d2e; border-radius:8px; padding:12px; }}
-.track.kp {{ border-color:#7a4ea0; }}
-.big {{ font-size:30px; font-weight:700; }}
-.kpis {{ display:flex; flex-wrap:wrap; gap:10px; margin:10px 0; }}
-.kpi {{ background:#f2f2f2; border-radius:6px; padding:8px 12px; min-width:110px; }}
-.kpi .l {{ font-size:11px; color:#777; }} .kpi .v {{ font-size:18px; font-weight:600; }}
-.chart {{ margin:8px 0; }} .chart h3 {{ font-size:13px; margin:6px 0; color:#555; }}
-table {{ border-collapse:collapse; width:100%; font-size:11px; margin-top:8px; }}
-td,th {{ border-bottom:1px solid #eee; padding:3px 6px; }}
-th {{ background:#1a4d2e; color:#fff; text-align:left; }}
-.msg {{ margin-top:16px; padding:12px; background:#fff8e1; border-left:4px solid #f0b400; font-size:13px; }}
-</style></head><body>
+    return f"""<div class="page">
 <h1>{esc(data['name'])}　小市集成績單</h1>
 <div class="sub">UID {esc(data['uid'])}　·　抽籤起始金 ${data['seed']}</div>
 
@@ -165,4 +170,22 @@ th {{ background:#1a4d2e; color:#fff; text-align:left; }}
 <div class="msg">「敬虔加上知足的心便是大利了」（提前 6:6）。<br>
 地上的財寶會朽壞、帶不走（×0.1）；存在天上的（天國點數）卻存得住、帶得走。
 你是忠心的好管家嗎？</div>
-</body></html>"""
+</div>"""
+
+
+def _wrap(title: str, body: str) -> str:
+    return (f'<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
+            f'<title>{html.escape(title)}</title><style>{_STYLE}</style></head>'
+            f'<body>{body}</body></html>')
+
+
+def render_html(data: dict) -> str:
+    return _wrap(f"{data['name']} · 小市集成績單", _render_body(data))
+
+
+def render_all(datas: list[dict]) -> str:
+    """批次列印：每位學生一張 A4（page-break）。瀏覽器 Ctrl+P 直接印或存 PDF。"""
+    if not datas:
+        return _wrap("小市集成績單（批次）", '<p style="padding:20px">尚無學生資料</p>')
+    body = "".join(_render_body(d) for d in datas)
+    return _wrap(f"小市集成績單批次（{len(datas)} 人）", body)
