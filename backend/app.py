@@ -37,7 +37,7 @@ async def require_token(request: Request, call_next):
     """Bearer token 驗證。/health 與 /api/auth/enroll 免驗；/api/admin/* 與報表需 admin。"""
     path = request.url.path
     # 後台 Web UI 外殼（HTML，瀏覽器直開、無 header）免驗；其 API 呼叫仍帶 Bearer。
-    if path in ("/health", "/admin") or path.startswith("/api/auth/enroll"):
+    if path in ("/health", "/admin", "/ledger") or path.startswith("/api/auth/enroll"):
         return await call_next(request)
 
     hdr = request.headers.get("authorization", "")
@@ -187,6 +187,12 @@ def admin_dashboard():
 @app.get("/admin", response_class=HTMLResponse)
 def web_admin():
     return FileResponse(os.path.join(WEB_DIR, "admin.html"))
+
+
+@app.get("/ledger", response_class=HTMLResponse)
+def web_ledger():
+    """大會手冊用空白記帳表（A4 可印，公開）。"""
+    return FileResponse(os.path.join(WEB_DIR, "ledger-form.html"))
 
 
 @app.get("/api/state")
