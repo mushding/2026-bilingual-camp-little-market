@@ -146,8 +146,13 @@ _STYLE = """
 body { font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
        color:var(--ink); margin:0; background:var(--paper);
        -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-.page { background:var(--paper); padding:4mm 2mm; }
+.page { background:var(--paper); padding:4mm 2mm 28mm; position:relative; }
 .page + .page { page-break-before:always; }
+.deco { position:absolute; z-index:0; pointer-events:none; }
+.deco.tr { top:2mm; right:3mm; opacity:.55; }
+.deco.bl { bottom:2mm; left:0; opacity:.95; }
+.deco.br { bottom:2mm; right:0; opacity:.95; }
+.content { position:relative; z-index:1; }
 
 .hd { display:flex; justify-content:space-between; align-items:flex-end;
       border-bottom:2.5px solid var(--green); padding-bottom:8px; }
@@ -194,6 +199,46 @@ td.r,th.r { text-align:right; font-variant-numeric:tabular-nums; }
 _CAMP_TITLE = "2026 理財島之好管家 · 小市集"
 _THEME = "忠心的好管家"
 
+# 頁角小插圖（內嵌 SVG，對齊主視覺：湖水綠雲、椰子島、沙丘樹叢）。列印安全、無外部依賴。
+_C = "#7cc1ba"   # 雲（淺湖水綠）
+_TEAL = "#2f8a80"; _TEAL_D = "#247169"; _SAND = "#e3b340"; _TRUNK = "#8a5a3b"; _CORAL = "#d98b4a"
+
+def _cloud(x, y, s):
+    return (f'<g transform="translate({x},{y}) scale({s})" fill="{_C}">'
+            f'<ellipse cx="22" cy="20" rx="22" ry="11"/><circle cx="12" cy="15" r="9"/>'
+            f'<circle cx="26" cy="11" r="12"/><circle cx="38" cy="16" r="8"/></g>')
+
+_DECO_CLOUDS = (f'<svg width="150" height="60" viewBox="0 0 150 60">'
+                f'{_cloud(0,8,1.0)}{_cloud(70,0,0.7)}</svg>')
+
+# 左下：椰子島
+_DECO_ISLAND = f'''<svg width="170" height="92" viewBox="0 0 170 92">
+<ellipse cx="70" cy="80" rx="62" ry="12" fill="{_CORAL}"/>
+<ellipse cx="70" cy="78" rx="62" ry="7" fill="#e7a05c"/>
+<path d="M52,80 C49,58 55,46 60,38" stroke="{_TRUNK}" stroke-width="5" fill="none" stroke-linecap="round"/>
+<g fill="{_TEAL}"><path d="M60,38 C44,30 30,34 26,44 C40,40 52,42 60,46 Z"/>
+<path d="M60,38 C76,30 90,36 92,46 C80,40 68,42 60,46 Z"/>
+<path d="M60,40 C52,24 40,18 30,20 C44,24 54,32 60,46 Z"/>
+<path d="M60,40 C70,24 84,20 92,24 C78,26 68,34 60,46 Z"/></g>
+<path d="M104,80 C102,64 106,55 110,49" stroke="{_TRUNK}" stroke-width="4" fill="none" stroke-linecap="round"/>
+<g fill="{_TEAL_D}"><path d="M110,49 C98,43 88,46 86,54 C97,50 105,52 110,55 Z"/>
+<path d="M110,49 C122,43 132,47 133,55 C123,50 116,52 110,55 Z"/></g>
+</svg>'''
+
+# 右下：沙丘 + 樹叢 + 山洞
+_DECO_DUNE = f'''<svg width="220" height="110" viewBox="0 0 220 110">
+<path d="M0,110 C70,70 150,70 220,92 L220,110 Z" fill="{_SAND}"/>
+<path d="M0,110 C70,78 150,78 220,98 L220,110 Z" fill="#edc863"/>
+<path d="M150,98 C150,80 190,80 190,98 Z" fill="{_TRUNK}"/>
+<ellipse cx="170" cy="98" rx="22" ry="10" fill="#6b4630"/>
+<path d="M148,99 a22,20 0 0 1 44,0 Z" fill="#4a3020"/>
+<rect x="118" y="60" width="7" height="34" rx="3" fill="{_TRUNK}"/>
+<circle cx="121" cy="52" r="17" fill="{_TEAL}"/><circle cx="108" cy="60" r="12" fill="{_TEAL_D}"/>
+<circle cx="134" cy="60" r="12" fill="{_TEAL_D}"/>
+<rect x="198" y="56" width="6" height="40" rx="3" fill="{_TRUNK}"/>
+<circle cx="201" cy="50" r="15" fill="{_TEAL_D}"/><circle cx="190" cy="58" r="10" fill="{_TEAL}"/>
+</svg>'''
+
 
 def _render_body(data: dict) -> str:
     """單張成績單內容（不含 <html>/<head>），供單張與批次列印共用。"""
@@ -221,6 +266,10 @@ def _render_body(data: dict) -> str:
                 f'{title}</h3>{_svg_line(series, color)}</div>')
 
     return f"""<div class="page">
+<div class="deco tr">{_DECO_CLOUDS}</div>
+<div class="deco bl">{_DECO_ISLAND}</div>
+<div class="deco br">{_DECO_DUNE}</div>
+<div class="content">
 <div class="hd">
   <div>
     <div class="camp">{_CAMP_TITLE}</div>
@@ -263,6 +312,7 @@ def _render_body(data: dict) -> str:
 <div class="msg"><b>「敬虔加上知足的心便是大利了」</b>（提摩太前書 6:6）<br>
 地上的財寶會朽壞、帶不走（市場關閉 ×0.1）；存在天上的（天國點數）卻存得住、帶得走。<br>
 願你成為又良善又忠心的好管家。
+</div>
 </div>
 </div>"""
 
