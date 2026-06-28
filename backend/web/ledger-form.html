@@ -34,17 +34,20 @@
 
   table { border-collapse:collapse; width:100%; }
   th,td { border:1px solid var(--line); }
-  thead th { background:var(--teal); color:#fff; font-size:13px; font-weight:700; padding:7px 6px; }
-  tbody td { height:8.6mm; padding:0 8px; font-size:13px; }
-  .c-no { width:30px; text-align:center; color:var(--muted); background:#fbf6e8; }
-  .c-in,.c-out,.c-bal { width:90px; }
+  thead th { background:var(--teal); color:#fff; font-size:12px; font-weight:700; padding:5px 6px; }
+  tbody td { height:6.2mm; padding:0 8px; font-size:12px; }
+  .c-no { width:26px; text-align:center; color:var(--muted); background:#fbf6e8; }
+  .c-in,.c-out,.c-bal { width:82px; }
   thead .c-in { background:var(--teal); }
   tbody tr:nth-child(even) td { background:#fdfaf2; }
   td.r { text-align:right; }
-  .colhint { font-size:10px; font-weight:400; opacity:.85; display:block; }
+  .colhint { font-size:9px; font-weight:400; opacity:.85; display:block; }
+  /* 長表跨頁：表頭每頁重複、列不切半（雙面列印友善） */
+  thead { display:table-header-group; }
+  tr { break-inside:avoid; page-break-inside:avoid; }
 
-  .note { margin-top:10px; padding:10px 14px; background:var(--sand-soft);
-          border-left:4px solid var(--sand); border-radius:0 8px 8px 0; font-size:12px; line-height:1.7; }
+  .note { margin-top:10px; padding:9px 14px; background:var(--sand-soft); break-inside:avoid;
+          border-left:4px solid var(--sand); border-radius:0 8px 8px 0; font-size:11.5px; line-height:1.6; }
   .note b { color:var(--teal-d); }
 
   /* 頁角小插圖（與成績單一致） */
@@ -116,8 +119,8 @@
 
 </div>
 <script>
-  // 空白列：填滿一頁 A4。改 ROWS 可調列數。
-  const ROWS = 22;
+  // 空白列：約兩頁 A4（雙面列印）。改 ROWS 可調列數。
+  const ROWS = 58;
   const tb = document.querySelector('tbody');
   for (let i = 1; i <= ROWS; i++) {
     tb.insertAdjacentHTML('beforeend',
