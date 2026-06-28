@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小市集 後台</title>
+<style>
+  :root { --green:#1a4d2e; --purple:#7a4ea0; --bg:#0f1419; --card:#1b2430; --line:#2c3a4a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+         background:var(--bg); color:#e6edf3; }
+  header { display:flex; align-items:center; gap:16px; padding:12px 20px;
+           background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+  header h1 { font-size:18px; margin:0; }
+  .tag { font-size:12px; padding:3px 8px; border-radius:6px; background:#243; color:#9f9; }
+  .tag.closed { background:#522; color:#f99; }
+  .spacer { flex:1; }
+  button { font:inherit; cursor:pointer; border:none; border-radius:8px; padding:8px 14px;
+           background:#2d3b4d; color:#e6edf3; }
+  button:hover { filter:brightness(1.15); }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button.primary { background:var(--green); }
+  button.warn { background:#b5460f; }
+  button.danger { background:#a01818; }
+  nav { display:flex; gap:8px; padding:10px 20px; }
+  nav button.active { background:var(--green); }
+  main { padding:0 20px 40px; }
+  .panel { display:none; }
+  .panel.show { display:block; }
+  .grid { display:flex; gap:12px; flex-wrap:wrap; margin:12px 0; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px;
+          padding:12px 16px; min-width:130px; }
+  .stat .l { font-size:12px; color:#8aa; } .stat .v { font-size:24px; font-weight:700; }
+  table { border-collapse:collapse; width:100%; font-size:13px; background:var(--card);
+          border-radius:10px; overflow:hidden; }
+  th,td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:right; }
+  th:first-child,td:first-child,th.l,td.l { text-align:left; }
+  th { background:#243140; cursor:pointer; user-select:none; position:sticky; top:56px; }
+  tr:hover td { background:#222d3a; }
+  .num { font-variant-numeric:tabular-nums; }
+  input,select { font:inherit; padding:8px 10px; border-radius:8px; border:1px solid var(--line);
+                 background:#0d1117; color:#e6edf3; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px;
+          padding:16px; margin:12px 0; }
+  .card h3 { margin:0 0 6px; font-size:15px; }
+  .card p { margin:0 0 10px; font-size:13px; color:#9ab; }
+  .done { color:#6f9; } .err { color:#f88; }
+  #login { max-width:340px; margin:80px auto; text-align:center; }
+  #login input { width:100%; margin:12px 0; text-align:center; }
+  .muted { color:#8aa; font-size:12px; }
+  .pill { font-size:11px; padding:1px 6px; border-radius:6px; background:#345; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>🏪 小市集 後台</h1>
+  <p class="muted">輸入總控設定碼註冊本電腦</p>
+  <input id="code" type="password" placeholder="ENROLL_ADMIN_CODE" autocomplete="off">
+  <button class="primary" style="width:100%" onclick="doEnroll()">註冊 / 登入</button>
+  <p id="loginMsg" class="err"></p>
+</div>
+
+<div id="app" style="display:none">
+<header>
+  <h1>🏪 小市集 後台</h1>
+  <span id="dayTag" class="tag">—</span>
+  <span id="mktTag" class="tag">—</span>
+  <span class="spacer"></span>
+  <span id="updated" class="muted"></span>
+  <button onclick="logout()">登出</button>
+</header>
+<nav>
+  <button data-tab="dash" class="active" onclick="showTab('dash')">📊 即時總覽</button>
+  <button data-tab="admin" onclick="showTab('admin')">⚙️ 總控操作</button>
+  <button data-tab="report" onclick="showTab('report')">📄 成績單</button>
+</nav>
+<main>
+
+  <section id="dash" class="panel show">
+    <div class="grid" id="stats"></div>
+    <div class="row">
+      <input id="filter" placeholder="搜尋姓名 / 小組…" oninput="renderTable()">
+      <span class="muted">每 3 秒自動更新；點欄位標題排序</span>
+    </div>
+    <table id="tbl"><thead></thead><tbody></tbody></table>
+  </section>
+
+  <section id="admin" class="panel">
+    <div class="card">
+      <h3>換日 set_day</h3>
+      <p>切換目前天數，影響各攤可用交易與結息歸屬。每場開始前切換。</p>
+      <div class="row">
+        <button onclick="setDay('D1')">D1</button>
+        <button onclick="setDay('D2')">D2</button>
+        <button onclick="setDay('D3')">D3</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>每場結息 settle_interest（每場一次，最多 3 次）</h3>
+      <p>對所有定存 +20%（複利、捨去整數）。每場只按一次，不可逆。</p>
+      <div class="row" id="settleBtns"></div>
+    </div>
+    <div class="card">
+      <h3>市場關閉 market_close（D3 突襲，不可逆）</h3>
+      <p>所有未兌換現金＋定存本利 ×0.1（銷毀 90%），市場凍結，凍結名次。只按一次。</p>
+      <button class="warn" onclick="confirmRun('🔒 市場關閉？銷毀 90% 現金、凍結市場，不可逆','/api/admin/market_close')">🔒 市場關閉</button>
+    </div>
+    <div class="card">
+      <h3>匯入名單 CSV</h3>
+      <p>欄位：uid,name,seed_amount,group,seat_no。已存在 UID 自動略過。</p>
+      <div class="row">
+        <input id="csv" type="file" accept=".csv">
+        <button class="primary" onclick="importCsv()">上傳匯入</button>
+        <span id="importMsg" class="muted"></span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>全重置 reset（測試用，不可復原）</h3>
+      <p>學員回起始金、清空帳本/任務/賭局/見證、天數回 D1、市場重開。保留名單與裝置註冊。</p>
+      <button class="danger" onclick="confirmRun('🧹 全重置？清空所有帳本與遊戲狀態，不可復原','/api/admin/reset')">🧹 Reset All</button>
+    </div>
+    <div class="card">
+      <h3>撤銷裝置 revoke</h3>
+      <p>依 label 撤銷已註冊的手機 token（遺失手機時用）。</p>
+      <div class="row">
+        <input id="revokeLabel" placeholder="裝置 label">
+        <button class="warn" onclick="revoke()">撤銷</button>
+        <span id="revokeMsg" class="muted"></span>
+      </div>
+    </div>
+    <p class="muted">註：讀卡 UID 需 NFC，僅手機 App 可用，電腦後台不提供。</p>
+  </section>
+
+  <section id="report" class="panel">
+    <div class="card">
+      <h3>全部學生成績單（A4 批次列印）</h3>
+      <p>產生一份 HTML，每位學生一張 A4。開啟後用瀏覽器列印（Ctrl/⌘+P）→ 存成 PDF 或直接印。
+         建議市場關閉後再印（名次才凍結）。</p>
+      <div class="row">
+        <button class="primary" onclick="openReport('/api/report/all/print')">🖨️ 開啟全部成績單</button>
+        <span class="muted">於新分頁開啟，再 Ctrl/⌘+P</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>個別學生成績單</h3>
+      <div class="row">
+        <select id="reportPick"></select>
+        <button onclick="openSingleReport()">開啟此學生</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<script>
+const TOKEN_KEY = 'lm_admin_token';
+let token = localStorage.getItem(TOKEN_KEY) || '';
+let data = null;          // 最近一次 dashboard
+let sortKey = 'points', sortDir = -1;
+let pollTimer = null;
+
+const $ = s => document.querySelector(s);
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: { ...(opts.headers || {}), 'Authorization': 'Bearer ' + token },
+  });
+  if (res.status === 401) { logout(); throw new Error('未授權，請重新登入'); }
+  if (res.status === 403) throw new Error('需總控權限');
+  const txt = await res.text();
+  let j; try { j = JSON.parse(txt); } catch { j = txt; }
+  if (!res.ok) throw new Error((j && j.message) || res.status);
+  return j;
+}
+
+// ── 登入 ──
+async function doEnroll() {
+  const code = $('#code').value.trim();
+  if (!code) return;
+  $('#loginMsg').textContent = '';
+  try {
+    const res = await fetch('/api/auth/enroll', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, label: 'web-admin-' + navigator.platform }),
+    });
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.message || '設定碼錯誤');
+    if (j.scope !== 'admin') throw new Error('此設定碼非總控權限');
+    token = j.token; localStorage.setItem(TOKEN_KEY, token);
+    boot();
+  } catch (e) { $('#loginMsg').textContent = e.message; }
+}
+
+function logout() {
+  localStorage.removeItem(TOKEN_KEY); token = '';
+  if (pollTimer) clearInterval(pollTimer);
+  $('#app').style.display = 'none'; $('#login').style.display = '';
+}
+
+function boot() {
+  $('#login').style.display = 'none'; $('#app').style.display = '';
+  buildSettleBtns();
+  poll();
+  pollTimer = setInterval(poll, 3000);
+}
+
+// ── 輪詢 / 總覽 ──
+async function poll() {
+  try {
+    data = await api('/api/admin/dashboard');
+    renderState(); renderStats(); renderTable(); renderReportPick(); buildSettleBtns();
+    $('#updated').textContent = '更新於 ' + new Date().toLocaleTimeString();
+  } catch (e) { $('#updated').textContent = '⚠️ ' + e.message; }
+}
+
+function renderState() {
+  const st = data.state;
+  $('#dayTag').textContent = '天：' + st.current_day;
+  const m = $('#mktTag');
+  m.textContent = st.market_open ? '市場開啟' : '市場已關閉';
+  m.className = 'tag' + (st.market_open ? '' : ' closed');
+}
+
+function renderStats() {
+  const s = data.summary, st = data.state;
+  const items = [
+    ['學生數', s.n_students], ['總資產（現金+定存）', s.total_asset],
+    ['總積分', s.total_points], ['總天國點數', s.total_kp],
+    ['已結息', st.settlement_count + ' / 3'],
+  ];
+  $('#stats').innerHTML = items.map(([l, v]) =>
+    `<div class="stat"><div class="l">${l}</div><div class="v num">${v}</div></div>`).join('');
+}
+
+const COLS = [
+  ['name', '姓名', true], ['group', '小組', true], ['seat_no', '座號', true],
+  ['seed', '起始金', false], ['balance', '現金', false], ['deposit', '定存', false],
+  ['asset', '總資產', false], ['points', '積分', false],
+  ['kingdom_points', '天國', false], ['card_count', '卡', false],
+  ['pending_tasks', '進行中', false],
+];
+
+function setSort(k) { if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } renderTable(); }
+
+function renderTable() {
+  if (!data) return;
+  const f = ($('#filter').value || '').trim().toLowerCase();
+  let rows = data.students.filter(r =>
+    !f || (r.name || '').toLowerCase().includes(f) || (r.group || '').toLowerCase().includes(f));
+  rows.sort((a, b) => {
+    let x = a[sortKey], y = b[sortKey];
+    if (typeof x === 'string' || typeof y === 'string') { x = x || ''; y = y || ''; return x < y ? -sortDir : x > y ? sortDir : 0; }
+    return ((x || 0) - (y || 0)) * sortDir;
+  });
+  const arrow = k => sortKey === k ? (sortDir > 0 ? ' ▲' : ' ▼') : '';
+  $('#tbl thead').innerHTML = '<tr>' + COLS.map(([k, l, isL]) =>
+    `<th class="${isL ? 'l' : ''}" onclick="setSort('${k}')">${l}${arrow(k)}</th>`).join('') + '</tr>';
+  $('#tbl tbody').innerHTML = rows.map(r => '<tr>' + COLS.map(([k, , isL]) => {
+    let v = r[k] == null ? '' : r[k];
+    if (k === 'pending_tasks' && r[k] > 0) v = `<span class="pill">${r[k]}</span>`;
+    return `<td class="${isL ? 'l' : 'num'}">${v}</td>`;
+  }).join('') + '</tr>').join('');
+}
+
+// ── 分頁 ──
+function showTab(t) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('show', p.id === t));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+}
+
+// ── 總控操作 ──
+function buildSettleBtns() {
+  const done = (data && data.state.settled_days) || [];
+  $('#settleBtns').innerHTML = ['D1', 'D2', 'D3'].map(d =>
+    done.includes(d)
+      ? `<button disabled>結息 ${d} ✓</button>`
+      : `<button onclick="settle('${d}')">結息 ${d}</button>`).join('');
+}
+
+async function setDay(d) {
+  try { await api('/api/admin/set_day', post({ day: d })); await poll(); toast('已換到 ' + d); }
+  catch (e) { toast(e.message, true); }
+}
+async function settle(d) {
+  if (!confirm(`結息 ${d}？對所有定存 +20%（複利），每場一次、不可逆。`)) return;
+  try { const r = await api('/api/admin/settle_interest', post({ day: d }));
+        await poll(); toast(`結息 ${d}：${r.students_settled} 人`); }
+  catch (e) { toast(e.message, true); }
+}
+async function confirmRun(msg, path) {
+  if (!confirm(msg + '\n\n確定執行？')) return;
+  try { const r = await api(path, { method: 'POST' }); await poll(); toast('完成：' + JSON.stringify(r)); }
+  catch (e) { toast(e.message, true); }
+}
+async function revoke() {
+  const label = $('#revokeLabel').value.trim();
+  if (!label) return;
+  try { const r = await api('/api/admin/revoke', post({ label }));
+        $('#revokeMsg').textContent = `已撤銷 ${r.revoked} 個`; }
+  catch (e) { $('#revokeMsg').textContent = e.message; }
+}
+async function importCsv() {
+  const f = $('#csv').files[0];
+  if (!f) { $('#importMsg').textContent = '請選檔'; return; }
+  const fd = new FormData(); fd.append('file', f);
+  $('#importMsg').textContent = '上傳中…';
+  try {
+    const r = await api('/api/admin/import', { method: 'POST', body: fd });
+    $('#importMsg').textContent = `匯入 ${r.imported}、略過 ${r.skipped}` +
+      (r.errors.length ? `、錯誤 ${r.errors.length}` : '');
+    await poll();
+  } catch (e) { $('#importMsg').textContent = e.message; }
+}
+
+const post = body => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+// ── 成績單 ──
+function renderReportPick() {
+  const sel = $('#reportPick'); if (!data) return;
+  const cur = sel.value;
+  sel.innerHTML = data.students.map(r =>
+    `<option value="${r.uid}">${r.name}${r.group ? ' (' + r.group + ')' : ''}</option>`).join('');
+  if (cur) sel.value = cur;
+}
+// 成績單 / 批次列印走 admin 權限，需帶 token → fetch 後用 blob 開新分頁。
+async function openReport(path) {
+  try {
+    const html = await api(path);
+    const blob = new Blob([html], { type: 'text/html' });
+    window.open(URL.createObjectURL(blob), '_blank');
+  } catch (e) { toast(e.message, true); }
+}
+function openSingleReport() {
+  const uid = $('#reportPick').value; if (uid) openReport('/api/report/' + encodeURIComponent(uid));
+}
+
+// ── toast ──
+function toast(msg, err) {
+  const d = document.createElement('div');
+  d.textContent = msg;
+  d.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:${err ? '#a01818' : '#1a4d2e'};color:#fff;padding:10px 18px;border-radius:8px;
+    z-index:99;box-shadow:0 4px 16px rgba(0,0,0,.4)`;
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 2600);
+}
+
+// ── 啟動 ──
+if (token) boot();
+</script>
+</body>
+</html>
