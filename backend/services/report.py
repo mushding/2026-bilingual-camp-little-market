@@ -133,12 +133,13 @@ def _svg_line(points: list[int], color: str, w=460, h=96, pad=14) -> str:
         f'<text x="{pad}" y="{h-3}" font-size="9" fill="#a99">min {lo}</text></svg>')
 
 
-# 主題色票（忠心好管家 — 豐收綠金）。改主視覺配色只動這裡。
+# 主題色票 — 2026 理財島之好管家主視覺（奶油底／湖水綠／沙金／珊瑚橘）。改配色只動這裡。
+# 變數名沿用 green/gold/purple，值已對齊主視覺：green=湖水綠、gold=沙金、purple=珊瑚橘。
 _STYLE = """
 :root {
-  --ink:#2b2017; --muted:#8a7c6a; --paper:#fbf7ee; --panel:#ffffff;
-  --green:#1f5132; --green-soft:#eaf1ea; --gold:#b5862b; --gold-soft:#fbf2dc;
-  --purple:#6b4a8f; --purple-soft:#f1ecf6; --line:#e7ddc8; --pos:#1f7a43; --neg:#bb3b2e;
+  --ink:#3a3326; --muted:#9a8f76; --paper:#f7f0d8; --panel:#fffdf5;
+  --green:#2f8a80; --green-soft:#e2efe9; --gold:#cf9a2f; --gold-soft:#f7ecc8;
+  --purple:#e07b3f; --purple-soft:#fbe6d6; --line:#e6dcc0; --pos:#2f8a80; --neg:#c0492b;
 }
 * { box-sizing:border-box; }
 @page { size:A4; margin:11mm; }
@@ -190,7 +191,7 @@ td.r,th.r { text-align:right; font-variant-numeric:tabular-nums; }
 .msg b { color:var(--green); }
 """
 
-_CAMP_TITLE = "2026 雙語營 · 小市集"
+_CAMP_TITLE = "2026 理財島之好管家 · 小市集"
 _THEME = "忠心的好管家"
 
 
@@ -248,10 +249,10 @@ def _render_body(data: dict) -> str:
 </div>
 
 <div class="charts">
-  {chart('總資產（現金＋定存）', '#1f5132', assets)}
-  {chart('定存軌', '#2f7ec4', deposits)}
-  {chart('積分變化', '#b5862b', pts)}
-  {chart('天國點數變化', '#6b4a8f', kps)}
+  {chart('總資產（現金＋定存）', '#2f8a80', assets)}
+  {chart('定存軌', '#3a7ca8', deposits)}
+  {chart('積分變化', '#cf9a2f', pts)}
+  {chart('天國點數變化', '#e07b3f', kps)}
 </div>
 
 <div class="ledger-h">交易明細</div>
