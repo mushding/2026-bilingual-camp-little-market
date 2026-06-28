@@ -187,6 +187,11 @@ table { border-collapse:collapse; width:100%; font-size:10.5px; }
 th,td { padding:4px 8px; border-bottom:1px solid var(--line); }
 th { background:var(--green); color:#fff; text-align:left; font-weight:600; }
 tbody tr:nth-child(even) { background:#fdfaf2; }
+/* 帳本長 → 瀏覽器自動換頁；表頭每頁重複、列不被切半（雙面列印友善） */
+thead { display:table-header-group; }
+tr { page-break-inside:avoid; break-inside:avoid; }
+.hd,.tracks,.kpis,.charts,.msg { break-inside:avoid; }
+.print-color { background:var(--green); color:#fff; } /* 強制保留表頭底色於列印 */
 td.r,th.r { text-align:right; font-variant-numeric:tabular-nums; }
 .tag { font-size:9.5px; padding:1px 7px; border-radius:10px; background:var(--gold-soft);
        color:var(--gold); white-space:nowrap; }
