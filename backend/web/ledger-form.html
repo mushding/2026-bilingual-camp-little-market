@@ -94,7 +94,6 @@
     <div class="who">
       <div class="f"><span class="lbl">姓名</span><span class="blank"></span></div>
       <div class="f"><span class="lbl">小組</span><span class="blank"></span></div>
-      <div class="f"><span class="lbl">座號</span><span class="blank" style="min-width:50px"></span></div>
       <div class="f"><span class="lbl">起始金</span><span class="seed-box">$ <span class="seed"></span></span></div>
     </div>
 
@@ -120,7 +119,7 @@
 </div>
 <script>
   // 空白列：約兩頁 A4（雙面列印）。改 ROWS 可調列數。
-  const ROWS = 58;
+  const ROWS = 70;
   const tb = document.querySelector('tbody');
   for (let i = 1; i <= ROWS; i++) {
     tb.insertAdjacentHTML('beforeend',
