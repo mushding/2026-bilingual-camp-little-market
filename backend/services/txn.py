@@ -197,6 +197,6 @@ def handle_scan(session, req) -> StudentState:
 
     if a == "guild_draw":
         from services.guild import draw  # 延遲匯入避免循環
-        return draw(session, s, day)
+        return draw(session, s, day, req.amount)
 
     return state_to_out(s, req.stall_id, a, f"未知 action: {a}", ok=False)

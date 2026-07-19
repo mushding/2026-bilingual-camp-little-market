@@ -197,6 +197,12 @@ class _ScanScreenState extends State<ScanScreen> {
         // 不需綁定關主：用本機自動裝置 id 防刷（每位同工各自一台）
         break;
       case TxnType.guildDraw:
+        final v = await showAmountInput(context,
+            title: '公會：抽幾個任務？', quickKeys: const [1, 2, 3], min: 1, max: 9,
+            hint: '免手續費，不重複任務，逾時 8 分扣 100');
+        if (v == null) return;
+        amount = v;
+        break;
       case TxnType.lookup:
         break;
       default:

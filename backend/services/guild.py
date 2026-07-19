@@ -1,17 +1,17 @@
 """公會抽/完成/逾時 — docs/11 B-8（single source）。
 
-規則：
-- 每「抽」一次手續費 100（以抽取次數計，不論手上任務數）。
-- 最多同時持有 3 個 pending 任務；抽到上限要先完成或讓任務逾時才能再抽。
-- 每個任務限時 8 分鐘；逾時未完成自動作廢，**不另外扣錢**（手續費已收）。
+規則（v2.3）：
+- 免手續費。學生指定一次要抽幾個關卡（N），關主在系統輸入 N，一次派 N 個
+  不重複任務（扣掉手上已持有的，最多整池 9 款）。
+- 每個任務限時 8 分鐘；逾時未完成自動作廢，**扣 100 元罰款**（免手續費後
+  唯一嚇阻手段）。
 """
 import random
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 
-from constants import (GAMES, GUILD_FEE, GUILD_MAX_TASKS, GUILD_POOL,
-                       TASK_EXPIRE_PENALTY, TASK_TIMEOUT_MIN)
+from constants import (GAMES, GUILD_POOL, TASK_EXPIRE_PENALTY, TASK_TIMEOUT_MIN)
 from models import GameState, GuildTask, Student
 from schemas import StudentState
 from services.txn import lock_student, now_iso, state_to_out, write_txn
@@ -20,7 +20,7 @@ _DIFF_ZH = {"low": "低", "mid": "中", "high": "高"}
 
 
 def sweep_expired(session, s: Student, day: str) -> int:
-    """掃描該生逾時的 pending 任務：自動作廢，不另外扣錢（手續費已收）。回作廢數。s 已鎖。"""
+    """掃描該生逾時的 pending 任務：自動作廢並扣罰款。回作廢數。s 已鎖。"""
     now = datetime.now(timezone.utc)
     expired = 0
     for t in session.scalars(select(GuildTask).where(
@@ -31,7 +31,7 @@ def sweep_expired(session, s: Student, day: str) -> int:
             continue
         if (now - drawn).total_seconds() >= TASK_TIMEOUT_MIN * 60:
             t.status = "expired"
-            penalty = min(TASK_EXPIRE_PENALTY, max(s.balance, 0))  # 預設 0
+            penalty = min(TASK_EXPIRE_PENALTY, max(s.balance, 0))
             if penalty:
                 s.balance -= penalty
             write_txn(session, s, "guild", "task_expired", -penalty, day,
@@ -40,28 +40,30 @@ def sweep_expired(session, s: Student, day: str) -> int:
     return expired
 
 
-def draw(session, s: Student, day: str) -> StudentState:
-    """guild_draw：手續費 300，累加 1 個任務（上限 3，不覆蓋）。s 已鎖。"""
-    pending_n = session.scalar(select(func.count()).select_from(GuildTask).where(
-        GuildTask.uid == s.uid, GuildTask.status == "pending"))
-    if pending_n >= GUILD_MAX_TASKS:
-        return state_to_out(s, "guild", "guild_draw",
-                            f"已持有 {GUILD_MAX_TASKS} 個任務，先完成再抽", ok=False)
-    if s.balance < GUILD_FEE:
-        return state_to_out(s, "guild", "guild_draw",
-                            f"餘額不足，公會手續費 ${GUILD_FEE}", ok=False)
-    s.balance -= GUILD_FEE
-    game_key = random.choice(GUILD_POOL)          # uniform random
-    name, difficulty, reward = GAMES[game_key]
-    session.add(GuildTask(uid=s.uid, game_key=game_key, difficulty=difficulty,
-                          reward=reward, status="pending", drawn_at=now_iso()))
-    write_txn(session, s, "guild", "guild_draw", -GUILD_FEE, day,
-              {"game_key": game_key, "reward": reward})
+def draw(session, s: Student, day: str, count: int) -> StudentState:
+    """guild_draw：免手續費，一次派 count 個不重複任務（扣掉手上已持有的）。s 已鎖。"""
+    if count < 1:
+        return state_to_out(s, "guild", "guild_draw", "數量需 ≥ 1", ok=False)
+    held = {t.game_key for t in session.scalars(select(GuildTask).where(
+        GuildTask.uid == s.uid, GuildTask.status == "pending"))}
+    available = [g for g in GUILD_POOL if g not in held]
+    if count > len(available):
+        return state_to_out(
+            s, "guild", "guild_draw",
+            f"最多還能抽 {len(available)} 個（已持有 {len(held)} 個不重複任務）", ok=False)
+    assigned = random.sample(available, count)
+    names = []
+    for game_key in assigned:
+        name, difficulty, reward = GAMES[game_key]
+        session.add(GuildTask(uid=s.uid, game_key=game_key, difficulty=difficulty,
+                              reward=reward, status="pending", drawn_at=now_iso()))
+        names.append(f"{name}（{_DIFF_ZH[difficulty]}・獎勵 {reward}）")
+    write_txn(session, s, "guild", "guild_draw", 0, day,
+              {"game_keys": assigned, "count": count})
     return state_to_out(
         s, "guild", "guild_draw",
-        f"已扣手續費 ${GUILD_FEE}　派發：{name}（{_DIFF_ZH[difficulty]}・獎勵 {reward}）"
-        f"　限 {TASK_TIMEOUT_MIN} 分　手上 {pending_n + 1}/{GUILD_MAX_TASKS}",
-        assigned_game=name)
+        f"派發 {count} 個：{'、'.join(names)}　限 {TASK_TIMEOUT_MIN} 分",
+        assigned_game="、".join(n.split("（")[0] for n in names))
 
 
 def pending(session, stall_id: str) -> list[dict]:

@@ -13,7 +13,7 @@ from models import Student, Transaction
 INCOME_ACTIONS = {"credit", "guild_complete", "interest", "transfer_in"}
 EXPENSE_ACTIONS = {"debit", "meal", "donate", "exchange_points", "guild_draw", "task_expired",
                    "transfer_out"}
-KP_ACTIONS = {"donate", "credit_kp", "mail_kp"}
+KP_ACTIONS = {"donate", "credit_kp", "mail_kp", "transfer_out"}
 
 # stall_id → 中文攤位名（對齊 lib/data/stalls.dart）
 STALL_NAMES = {

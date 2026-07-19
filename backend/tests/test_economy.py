@@ -122,26 +122,28 @@ def test_dice_seven_payout():
         assert s.get(models.Student, "H").balance == 700
 
 
-def test_guild_draw_fee_and_pending():
+def test_guild_draw_no_fee_and_n_tasks():
     fresh_state(); add_student("I", 2000)
-    r = scan(uid="I", stall_id="guild", action="guild_draw")
-    assert r["balance"] == 1900 and r["assigned_game"]  # 扣 100
-    assert len(r["pending_tasks"]) == 1
+    r = scan(uid="I", stall_id="guild", action="guild_draw", amount=2)
+    assert r["balance"] == 2000 and r["assigned_game"]  # 免手續費
+    assert len(r["pending_tasks"]) == 2
 
 
-def test_guild_max_3_tasks():
+def test_guild_draw_no_duplicates_and_pool_cap():
     fresh_state(); add_student("J", 2000)
-    for _ in range(3):
-        scan(uid="J", stall_id="guild", action="guild_draw")
-    r4 = scan(uid="J", stall_id="guild", action="guild_draw")  # 第 4 次被擋
-    assert r4["ok"] is False and r4["balance"] == 1700  # 只扣了 3 次 100
+    r = scan(uid="J", stall_id="guild", action="guild_draw", amount=9)  # 整池 9 款
+    assert r["ok"] is True and len(r["pending_tasks"]) == 9
+    game_keys = {t["game_key"] for t in r["pending_tasks"]}
+    assert len(game_keys) == 9  # 不重複
+    r2 = scan(uid="J", stall_id="guild", action="guild_draw", amount=1)  # 池已抽光
+    assert r2["ok"] is False and r2["balance"] == 2000
 
 
 def test_guild_task_timeout_penalty():
     import models
     from datetime import datetime, timedelta, timezone
     fresh_state(); add_student("K", 2000)
-    scan(uid="K", stall_id="guild", action="guild_draw")  # bal 1900, 1 task
+    scan(uid="K", stall_id="guild", action="guild_draw", amount=1)  # bal 2000, 1 task
     # 把 drawn_at 改成 9 分鐘前（逾時線 8 分鐘）
     from sqlalchemy import select as _sel
     past = (datetime.now(timezone.utc) - timedelta(minutes=9)).isoformat(timespec="seconds")
@@ -149,7 +151,7 @@ def test_guild_task_timeout_penalty():
         t = s.scalars(_sel(models.GuildTask).where(models.GuildTask.uid == "K")).first()
         t.drawn_at = past
     r = scan(uid="K", stall_id="bank", action="lookup")  # 掃卡觸發 sweep
-    assert r["balance"] == 1900 and len(r["pending_tasks"]) == 0  # 逾時作廢、不扣錢（手續費已收）
+    assert r["balance"] == 1900 and len(r["pending_tasks"]) == 0  # 逾時扣 100
 
 
 def test_guild_complete_matches_stall():
@@ -182,6 +184,7 @@ def test_bank_transfer():
     with S.begin() as s:
         out = bank.transfer(s, "TA", "TB", 200)
     assert out["ok"] is True and out["from"]["balance"] == 300 and out["to"]["balance"] == 300
+    assert out["from"]["kingdom_points"] == 200  # A 金額 1:1 轉天國點數
     with S.begin() as s:
         bad_self = bank.transfer(s, "TA", "TA", 10)
     assert bad_self["ok"] is False

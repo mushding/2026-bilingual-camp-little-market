@@ -77,7 +77,7 @@ enum TxnType {
   casinoDice,        // action=casino round         multi-step
 
   // ── 公會
-  guildDraw,         // 公會抽     action=guild_draw      扣100，回傳隨機派發遊戲
+  guildDraw,         // 公會抽     action=guild_draw      免手續費，指定N，回傳隨機派發N個不重複遊戲
   guildComplete,     // 小遊戲完成 action=guild_complete  固定獎勵，看 pending 名單
 }
 ```
@@ -148,9 +148,9 @@ ScanScreen
 | `donation` | 是 | 金額 sheet（無下限，>0 即可；快捷 100/500/1000） | `{action:donate, amount}` |
 | `exchange` | 是 | `ExchangePicker` 100/250/400/750 可多次 | `{action:exchange_points, amount:tier}` |
 | `grocery` | 是 | 售價 sheet（含感謝卡商品） | `{action:debit, amount}`（**純扣款，不再帶 cards、不加任何 KP**） |
-| `mailKp` | 是 | **非 NFC**：名字搜尋框 → 候選清單（同名顯示小組消歧）選定學生 → 「卡數 1–3」 | `{action:mail_kp, sender_name 或 uid, cards:n}`（後端 name→uid 反查，kingdom_points += 100×n，受 `card_count≤3`） |
+| `mailKp` | 是 | **非 NFC**：名字搜尋框 → 候選清單（同名顯示小組消歧）選定學生 → 「卡數」 | `{action:mail_kp, sender_name 或 uid, cards:n}`（後端 name→uid 反查，kingdom_points += 100×n，**不限張數**） |
 | `meal` | 是 | 金額 sheet（預設鍵 150，範圍 100–250） | `{action:meal, amount}`（debit，計入 total_expense） |
-| `guildDraw` | 否（系統固定扣100） | 結果對話框顯示「派發：投籃高手」 | `POST /api/scan {action:guild_draw}` |
+| `guildDraw` | 是（指定要抽的數量 N） | 數量 sheet（快捷 1/2/3，範圍 1–9） | `POST /api/scan {action:guild_draw, amount:N}`（**免手續費**） |
 | `guildComplete` | 否 | `GuildPendingScreen` 點名單 | `POST /api/guild/complete {student_uid, stall_id, staff_uid}` |
 | `casino21` / `casinoDice` | 是（多步） | `CasinoTableScreen` | 見 §4 |
 
@@ -261,6 +261,6 @@ ScanScreen
 
 ## 附錄：交易字串 / action 對照
 
-`Day1賣娃娃`（固定三檔）、`Day1套圈圈`、`Day1射飛鏢`、`Day1麻將賓果`、`銀行`(lookup/deposit/withdraw/transfer)、`分享見證`(credit_kp +100)、`舊鞋救命`(debit + credit_kp，無下限)、`積分`(debit + credit_points)、`雜貨店`(**純 debit，不加 KP**)、`郵政`(mail_kp，名字搜尋寄件人 +100×n KP)、`餐費`(meal debit，約150)、`賭場21點`、`賭場大小骰子`、`公會`(抽取 −100)、`顏色分類`、`終極密碼`、`搬家人工`、`投籃高手`、`丟紙飛機`、`拍氣球`、`比手畫腳`、`記憶翻牌`、`七巧板`（後 9 款：lookup / complete 固定獎勵）。
+`Day1賣娃娃`（固定三檔）、`Day1套圈圈`、`Day1射飛鏢`、`Day1麻將賓果`、`銀行`(lookup/deposit/withdraw/transfer，**轉出方 1:1 拿 KP**)、`分享見證`(credit_kp +100)、`舊鞋救命`(debit + credit_kp，無下限)、`積分`(debit + credit_points)、`雜貨店`(**純 debit，不加 KP**)、`郵政`(mail_kp，名字搜尋寄件人 +100×n KP)、`餐費`(meal debit，約150)、`賭場21點`、`賭場大小骰子`、`公會`(抽取，**免手續費**，指定 N)、`顏色分類`、`終極密碼`、`搬家人工`、`投籃高手`、`丟紙飛機`、`拍氣球`、`比手畫腳`、`記憶翻牌`、`七巧板`（後 9 款：lookup / complete 固定獎勵）。
 
 > 後端沿用現有 `POST /api/scan {uid,stall_id,action,amount}`；新增 action：`deposit`、`withdraw`、`credit_kp`、`credit_points`、`meal`（餐費 debit）、`mail_kp`（郵政感謝卡核銷，by-name，+100×n KP）、`complete`（公會固定獎勵）。郵政另需 `GET /api/students/search?name=`（by-name 反查）。銀行轉帳走獨立的 `POST /api/bank/transfer {from_uid,to_uid,amount}`，不經 `/api/scan`。所有 state 入後端 DB、原子交易、UID-lookup、**卡片不寫入**。

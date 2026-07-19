@@ -94,8 +94,8 @@ class ScanReq(BaseModel):
 | `credit_kp` | kingdom_points += amount（見證固定 100） | **去重** `witness_log` unique(student_uid, staff_uid)；已給 → ok=false |
 | `donate` | balance -= amount；kingdom_points += amount（二三天同一套，**無 D3 bonus**） | amount>0、balance≥amount、market_open |
 | `exchange_points` | balance -= tier；points += TIER_MAP[tier] | tier∈{100,250,400,750}、balance≥tier、market_open |
-| `guild_draw` | balance -= 100，隨機派任務（見 §3） | balance≥100、market_open、最多同時 3 個 pending（累加不覆蓋） |
-| `transfer` | src.balance -= amount；dst.balance += amount（兩學生對轉，無手續費無上限） | amount>0、from≠to、src.balance≥amount、market_open |
+| `guild_draw` | **免手續費**，依 user input N 一次派 N 個不重複任務（見 §3） | market_open、N≥1、N ≤ 9−目前已持有數 |
+| `transfer` | src.balance -= amount；dst.balance += amount；**src.kingdom_points += amount**（兩學生對轉，無手續費無上限，轉出方 1:1 拿 KP） | amount>0、from≠to、src.balance≥amount、market_open |
 
 **積分兌換對照表**
 
@@ -154,27 +154,26 @@ def apply(session, uid, fn) -> StudentState:
 ### 3.1 抽任務
 
 ```
-POST /api/scan {action:guild_draw, uid, stall_id:'guild', staff_uid}
+POST /api/scan {action:guild_draw, uid, stall_id:'guild', amount:N, staff_uid}
 ```
 
 原子流程：
 
-1. 先掃該生逾時 pending（≥8 分）→ `expired` 作廢、不扣錢。
-2. 現有 pending 已達 **3** 個？是 → ok=false「先完成再抽」。
-3. balance ≥ 100？否 → ok=false。
-4. balance -= 100（手續費，以抽取次數計）。
-5. 從 9 款池 **uniform random** 抽 1，**累加**寫 `guild_tasks(uid, game_key, difficulty, reward, status=pending, drawn_at)`（不覆蓋舊任務）。
-6. message 例：`派發任務：投籃高手（中・獎勵160）　限8分　手上 n/3`，回 StudentState + `assigned_game`。
+1. 先掃該生逾時 pending（≥8 分）→ `expired` 作廢、**扣 100 罰款**。
+2. N ≥ 1？否 → ok=false「數量需 ≥ 1」。
+3. 算出 available = 9 款池扣掉目前已持有的 pending game_key；N > len(available)？是 → ok=false「最多還能抽 X 個」。
+4. **免手續費**，從 available 用 `random.sample` 抽 N 款（不重複），**累加**寫 N 筆 `guild_tasks(uid, game_key, difficulty, reward, status=pending, drawn_at)`（同一批 drawn_at 相同，不覆蓋舊任務）。
+5. message 例：`派發 2 個：投籃高手（中・獎勵60）、七巧板（高・獎勵100）　限8分`，回 StudentState + `assigned_game`。
 
-**抽取池（9 款，均勻隨機）**
+**抽取池（9 款，均勻隨機，不重複）**
 
 | 難度 | 固定獎勵 | 款數 | 遊戲 |
 |---|---|---|---|
-| 低 | 130 | 2 | 終極密碼、搬家人工 |
-| 中 | 160 | 5 | 投籃高手、丟紙飛機、拍氣球、比手畫腳、記憶翻牌 |
-| 高 | 200 | 2 | 顏色分類、七巧板 |
+| 低 | 30 | 2 | 終極密碼、搬家人工 |
+| 中 | 60 | 5 | 投籃高手、丟紙飛機、拍氣球、比手畫腳、記憶翻牌 |
+| 高 | 100 | 2 | 顏色分類、七巧板 |
 
-> 期望獎勵 162.22、每抽淨值 +62.22；重抽期望 −67.78（SOT §3），自帶剎車。逾時作廢不扣錢（手續費已收）。
+> 單一任務期望獎勵 62.22（免手續費即單抽期望淨值，SOT §3）。逾時作廢扣 100 罰款（免手續費後唯一嚇阻）；N 個任務共用同一個 8 分鐘倒數，抽越多、時限內跑完全部關卡越難，這是新的剎車機制（時間風險取代舊版手續費沉沒成本）。
 
 ### 3.2 小遊戲攤看 pending
 
@@ -341,7 +340,7 @@ GET /api/report/all              # 批次：產所有人 HTML（zip 或逐頁）
 | 欄位 | 計算 |
 |---|---|
 | `total_income` | Σ amount of credit / **game_settle `meta.reward`** / guild_complete / interest / **賭場淨彩金（payout − 原始 bet 本金，不含退回本金）**。賭場以淨輸贏入帳，避免把整筆 payout（含退回本金）計入而灌大毛額 |
-| `total_expense` | Σ |amount| of debit / **meal（餐費）** / **game_settle `meta.cost`（固定 100）** / donate / exchange / casino lose / 公會手續費 100（deposit 不計） |
+| `total_expense` | Σ |amount| of debit / **meal（餐費）** / **game_settle `meta.cost`（固定 100）** / donate / exchange / casino lose / task_expired 罰款 100（deposit 不計；guild_draw 免手續費不計入） |
 | `roi_pct`（建議直觀版） | `(total_income − total_expense) / seed × 100`，另列「最終總積分」「總 KP」獨立呈現 |
 | `kingdom_points`（總 KP） | Σ KP 類交易：`donate` / `credit_kp`（聽見證 +100）/ **`mail_kp`（郵政感謝卡核銷 +100×n）**。買感謝卡的 `debit` 不加 KP（已改郵政核銷）；回應卡已取消 |
 
@@ -390,6 +389,6 @@ GET /api/report/all              # 批次：產所有人 HTML（zip 或逐頁）
 | `mail_kp` | 新增 | 郵政感謝卡核銷，by-name 反查寄件人，+100×n KP（不限張數） |
 | `exchange_points`（積分） | 新增 | 依 TIER_MAP 兌換 |
 | `donate` | 新增 | 奉獻 1:1 轉 KP（無下限，>0 即可，無 D3 bonus） |
-| `guild_draw` / `guild_complete` | 新增 | 公會抽取 −100 / 固定獎勵入帳 |
-| `transfer` | 新增 | 銀行轉帳：兩學生對轉，無手續費無上限 |
+| `guild_draw` / `guild_complete` | 新增 | 公會抽取（免手續費，指定 N）/ 固定獎勵入帳 |
+| `transfer` | 新增 | 銀行轉帳：兩學生對轉，無手續費無上限，轉出方 1:1 拿 KP |
 | `interest` `market_close` | 新增 | 管理：結息／市場關閉 |
