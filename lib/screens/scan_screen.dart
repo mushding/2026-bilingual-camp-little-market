@@ -11,6 +11,7 @@ import '../widgets/amount_input_sheet.dart';
 import '../widgets/exchange_picker.dart';
 import '../widgets/student_card.dart';
 import 'admin_screen.dart';
+import 'bank_transfer_screen.dart';
 import 'casino_table_screen.dart';
 import 'guild_pending_screen.dart';
 import 'mail_screen.dart';
@@ -83,6 +84,7 @@ class _ScanScreenState extends State<ScanScreen> {
       _stall.id == 'casino_21' || _stall.id == 'casino_dice';
   bool get _isGameStall => _stall.id.startsWith('game_');
   bool get _isMail => _stall.id == 'mail';
+  bool get _isBank => _stall.id == 'bank';
 
   Future<void> _scan() async {
     setState(() {
@@ -136,6 +138,10 @@ class _ScanScreenState extends State<ScanScreen> {
     int amount = 0, cost = 0, reward = 0, tier = 0;
     switch (t) {
       case TxnType.day1SellDoll:
+        final v = await _pickDollPrice();
+        if (v == null) return;
+        amount = v;
+        break;
       case TxnType.grocery:
         final v = await showAmountInput(context,
             title: '${t.label} 售價', quickKeys: const [20, 50, 100, 200], hint: '輸入售價（真實物價）');
@@ -152,19 +158,19 @@ class _ScanScreenState extends State<ScanScreen> {
         final n = await showAmountInput(context, title: '中圈數 (0–10)', max: 10, hint: '中幾圈');
         if (n == null) return;
         cost = 100;
-        reward = (n < 0 ? 0 : n) * 50;
+        reward = (n < 0 ? 0 : n) * 100;
         break;
       case TxnType.day1Dart:
         final n = await showAmountInput(context, title: '命中數 (0–10)', max: 10, hint: '命中幾鏢');
         if (n == null) return;
         cost = 100;
-        reward = (n < 0 ? 0 : n) * 25;
+        reward = (n < 0 ? 0 : n) * 20;
         break;
       case TxnType.day1Bingo:
         final win = await _bingoResult();
         if (win == null) return;
         cost = 100;
-        reward = win ? 1500 : 0;
+        reward = win ? 1000 : 0;
         break;
       case TxnType.bankDeposit:
         final v = await showAmountInput(context, title: '定存金額', hint: '存多少');
@@ -178,7 +184,7 @@ class _ScanScreenState extends State<ScanScreen> {
         break;
       case TxnType.donation:
         final v = await showAmountInput(context,
-            title: '奉獻金額', min: 50, quickKeys: const [100, 500, 1000], hint: '現金 1:1 轉天國點數');
+            title: '奉獻金額', quickKeys: const [100, 500, 1000], hint: '現金 1:1 轉天國點數');
         if (v == null) return;
         amount = v;
         break;
@@ -253,10 +259,34 @@ class _ScanScreenState extends State<ScanScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('麻將賓果結果'),
-          content: const Text('任一連線即中（賠 1500）'),
+          content: const Text('任一連線即中（賠 1000）'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('未中')),
             FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('中獎')),
+          ],
+        ),
+      );
+
+  /// 賣娃娃固定三檔：大1000／中500／小300。
+  Future<int?> _pickDollPrice() => showDialog<int>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('賣娃娃 — 選尺寸'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            for (final e in const {'大': 1000, '中': 500, '小': 300}.entries)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(ctx, e.value),
+                    child: Text('${e.key} — \$${e.value}', style: const TextStyle(fontSize: 18)),
+                  ),
+                ),
+              ),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
           ],
         ),
       );
@@ -398,6 +428,18 @@ class _ScanScreenState extends State<ScanScreen> {
                   ]),
           ),
         ),
+        if (_isBank && _state == _S.idle) ...[
+          OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const BankTransferScreen())),
+            icon: const Icon(Icons.swap_horiz),
+            label: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Text('服務三：轉帳', style: TextStyle(fontSize: 16)),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         _scanButton(),
       ]);
     }

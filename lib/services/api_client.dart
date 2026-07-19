@@ -71,6 +71,14 @@ class ApiClient {
     return StudentState.fromJson(await _post('/api/scan', body));
   }
 
+  // ── 銀行轉帳 ────────────────────────────────────────────────────────────
+  static Future<Map<String, dynamic>> bankTransfer({
+    required String fromUid,
+    required String toUid,
+    required int amount,
+  }) =>
+      _post('/api/bank/transfer', {'from_uid': fromUid, 'to_uid': toUid, 'amount': amount});
+
   // ── 郵政 by-name 反查 ────────────────────────────────────────────────
   static Future<List<Map<String, dynamic>>> studentSearch(String name) async {
     final r = await _get('/api/students/search?name=${Uri.encodeQueryComponent(name)}');

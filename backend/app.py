@@ -98,6 +98,13 @@ def students_search(name: str = Query(...)):
                 for r in rows]
 
 
+# ── 銀行轉帳 ────────────────────────────────────────────────────────────
+@app.post("/api/bank/transfer")
+def bank_transfer(req: schemas.TransferReq):
+    with SessionLocal.begin() as s:
+        return bank.transfer(s, req.from_uid, req.to_uid, req.amount)
+
+
 # ── 公會 ────────────────────────────────────────────────────────────────
 @app.get("/api/guild/pending")
 def guild_pending(stall_id: str = Query(...)):

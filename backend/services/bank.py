@@ -7,7 +7,7 @@ from sqlalchemy import delete, select
 from constants import DEPOSIT_RATE, MARKET_CLOSE_RATE, MAX_SETTLEMENTS
 from models import (CasinoBet, CasinoRound, GameState, GuildTask, Student,
                     Transaction, WitnessLog)
-from services.txn import get_state, write_txn
+from services.txn import get_state, lock_student, write_txn
 
 
 def set_day(session, day: str) -> dict:
@@ -39,6 +39,31 @@ def settle_interest(session, day: str) -> dict:
     st.settlement_count += 1
     return {"ok": True, "day": day, "students_settled": count,
             "settlement_count": st.settlement_count}
+
+
+def transfer(session, from_uid: str, to_uid: str, amount: int) -> dict:
+    """服務三：兩學生一起找銀行，指定把錢從 A 轉到 B。無手續費、無金額上限。"""
+    st = get_state(session)
+    if not st.market_open:
+        return {"ok": False, "message": "市場已關閉，僅能查詢"}
+    if amount <= 0:
+        return {"ok": False, "message": "金額需 > 0"}
+    if from_uid == to_uid:
+        return {"ok": False, "message": "不能轉給自己"}
+    # 依 uid 排序上鎖，固定順序避免兩張卡互轉時 deadlock
+    uid_a, uid_b = sorted((from_uid, to_uid))
+    locked = {uid_a: lock_student(session, uid_a), uid_b: lock_student(session, uid_b)}
+    src, dst = locked[from_uid], locked[to_uid]
+    if src is None or dst is None:
+        return {"ok": False, "message": "查無此卡"}
+    if src.balance < amount:
+        return {"ok": False, "message": f"餘額不足（需 ${amount}，有 ${src.balance}）"}
+    src.balance -= amount
+    dst.balance += amount
+    write_txn(session, src, "bank", "transfer_out", -amount, st.current_day, {"to": dst.uid})
+    write_txn(session, dst, "bank", "transfer_in", amount, st.current_day, {"from": src.uid})
+    return {"ok": True, "from": {"uid": src.uid, "name": src.name, "balance": src.balance},
+            "to": {"uid": dst.uid, "name": dst.name, "balance": dst.balance}, "amount": amount}
 
 
 def market_close(session) -> dict:

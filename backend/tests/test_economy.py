@@ -55,12 +55,12 @@ def test_debit_and_insufficient():
 
 
 def test_exchange_points():
-    fresh_state(); add_student("B", 3000)
-    r = scan(uid="B", stall_id="exchange", action="exchange_points", tier=2500)
-    assert r["points"] == TIER_MAP[2500] == 3000 and r["balance"] == 500
-    # 500 小檔（1.0）
-    r2 = scan(uid="B", stall_id="exchange", action="exchange_points", tier=500)
-    assert r2["points"] == 3000 + TIER_MAP[500] == 3500 and r2["balance"] == 0
+    fresh_state(); add_student("B", 800)
+    r = scan(uid="B", stall_id="exchange", action="exchange_points", tier=400)
+    assert r["points"] == TIER_MAP[400] == 500 and r["balance"] == 400
+    # 100 小檔（1.0）
+    r2 = scan(uid="B", stall_id="exchange", action="exchange_points", tier=100)
+    assert r2["points"] == 500 + TIER_MAP[100] == 600 and r2["balance"] == 300
 
 
 def test_donate_kp_no_d3_bonus():
@@ -73,16 +73,16 @@ def test_donate_kp_no_d3_bonus():
 
 def test_witness_dedup():
     fresh_state(); add_student("D", 500)
-    assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S1")["kingdom_points"] == 1000
+    assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S1")["kingdom_points"] == 100
     assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S1")["ok"] is False
-    assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S2")["kingdom_points"] == 2000
+    assert scan(uid="D", stall_id="witness", action="credit_kp", staff_uid="S2")["kingdom_points"] == 200
 
 
 def test_mail_kp_no_cap():
     fresh_state(); add_student("E", 500)
-    assert scan(uid="E", stall_id="mail", action="mail_kp", cards=2)["kingdom_points"] == 400
+    assert scan(uid="E", stall_id="mail", action="mail_kp", cards=2)["kingdom_points"] == 200
     r = scan(uid="E", stall_id="mail", action="mail_kp", cards=5)  # 不限張數
-    assert r["kingdom_points"] == 1400  # 400 + 1000
+    assert r["kingdom_points"] == 700  # 200 + 500
 
 
 def test_deposit_interest_compound():
@@ -125,7 +125,7 @@ def test_dice_seven_payout():
 def test_guild_draw_fee_and_pending():
     fresh_state(); add_student("I", 2000)
     r = scan(uid="I", stall_id="guild", action="guild_draw")
-    assert r["balance"] == 1700 and r["assigned_game"]  # 扣 300
+    assert r["balance"] == 1900 and r["assigned_game"]  # 扣 100
     assert len(r["pending_tasks"]) == 1
 
 
@@ -134,22 +134,22 @@ def test_guild_max_3_tasks():
     for _ in range(3):
         scan(uid="J", stall_id="guild", action="guild_draw")
     r4 = scan(uid="J", stall_id="guild", action="guild_draw")  # 第 4 次被擋
-    assert r4["ok"] is False and r4["balance"] == 1100  # 只扣了 3 次 300
+    assert r4["ok"] is False and r4["balance"] == 1700  # 只扣了 3 次 100
 
 
 def test_guild_task_timeout_penalty():
     import models
     from datetime import datetime, timedelta, timezone
     fresh_state(); add_student("K", 2000)
-    scan(uid="K", stall_id="guild", action="guild_draw")  # bal 1700, 1 task
-    # 把 drawn_at 改成 11 分鐘前
+    scan(uid="K", stall_id="guild", action="guild_draw")  # bal 1900, 1 task
+    # 把 drawn_at 改成 9 分鐘前（逾時線 8 分鐘）
     from sqlalchemy import select as _sel
-    past = (datetime.now(timezone.utc) - timedelta(minutes=11)).isoformat(timespec="seconds")
+    past = (datetime.now(timezone.utc) - timedelta(minutes=9)).isoformat(timespec="seconds")
     with S.begin() as s:
         t = s.scalars(_sel(models.GuildTask).where(models.GuildTask.uid == "K")).first()
         t.drawn_at = past
     r = scan(uid="K", stall_id="bank", action="lookup")  # 掃卡觸發 sweep
-    assert r["balance"] == 1700 and len(r["pending_tasks"]) == 0  # 逾時作廢、不扣錢（手續費已收）
+    assert r["balance"] == 1900 and len(r["pending_tasks"]) == 0  # 逾時作廢、不扣錢（手續費已收）
 
 
 def test_guild_complete_matches_stall():
@@ -167,6 +167,35 @@ def test_guild_complete_matches_stall():
     with S.begin() as s:
         r = guild.complete(s, "L", "game_basketball", "dev").model_dump()
     assert r["ok"] is True and r["balance"] == 1400  # +900
+
+
+def test_donate_no_floor():
+    fresh_state(); add_student("DON", 500)
+    r = scan(uid="DON", stall_id="donation", action="donate", amount=1)
+    assert r["ok"] is True and r["kingdom_points"] == 1 and r["balance"] == 499
+    r0 = scan(uid="DON", stall_id="donation", action="donate", amount=0)
+    assert r0["ok"] is False  # 0 元仍擋
+
+
+def test_bank_transfer():
+    fresh_state(); add_student("TA", 500); add_student("TB", 100)
+    with S.begin() as s:
+        out = bank.transfer(s, "TA", "TB", 200)
+    assert out["ok"] is True and out["from"]["balance"] == 300 and out["to"]["balance"] == 300
+    with S.begin() as s:
+        bad_self = bank.transfer(s, "TA", "TA", 10)
+    assert bad_self["ok"] is False
+    with S.begin() as s:
+        bad_insufficient = bank.transfer(s, "TB", "TA", 99999)
+    assert bad_insufficient["ok"] is False
+    fresh_state()  # market_open=1 預設，先關市場再測試阻擋
+    with S.begin() as s:
+        s.query(models.GameState).delete()
+        s.add(models.GameState(id=1, current_day="D2", market_open=0,
+                               settlement_count=0, settled_days="[]"))
+    with S.begin() as s:
+        blocked = bank.transfer(s, "TA", "TB", 10)
+    assert blocked["ok"] is False
 
 
 def test_reset_all():

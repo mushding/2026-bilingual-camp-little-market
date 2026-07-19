@@ -73,7 +73,7 @@ class ScanReq(BaseModel):
     # 選用
     cost: int = 0         # game_settle 用
     reward: int = 0       # game_settle 用
-    tier: int | None = None     # exchange_points 檔位 (500/1000/2500/4000/7500)
+    tier: int | None = None     # exchange_points 檔位 (100/250/400/750)
     cards: int = 0        # mail_kp 郵政核銷卡數（寄件人）
     sender_name: str | None = None  # mail_kp 用：寄件人名字（非 NFC 流程，亦可改帶 uid）
     staff_uid: str | None = None  # witness / 防作弊
@@ -86,20 +86,21 @@ class ScanReq(BaseModel):
 | `lookup` | 回 StudentState | 學生不存在 → ok=false |
 | `debit` | balance -= amount（雜貨店含感謝卡商品，**純扣款、不加任何 KP**） | amount>0、balance≥amount、market_open |
 | `meal` | balance -= amount（餐費，預設150、範圍100–250）。計入 `total_expense` | amount>0、balance≥amount、market_open |
-| `mail_kp` | 郵政核銷：依 `uid`（或 `sender_name` 反查）對**寄件人** kingdom_points += 200×cards；`card_count += cards`（**不限張數**，僅計數） | cards≥1；name 反查需唯一命中（同名→回候選清單由 App 選定 uid）；不需 market_open（核銷可在關市後整理） |
+| `mail_kp` | 郵政核銷：依 `uid`（或 `sender_name` 反查）對**寄件人** kingdom_points += 100×cards；`card_count += cards`（**不限張數**，僅計數） | cards≥1；name 反查需唯一命中（同名→回候選清單由 App 選定 uid）；不需 market_open（核銷可在關市後整理） |
 | `credit` | balance += amount | amount>0 |
 | `game_settle` | balance -= cost；若 reward>0 則 balance += reward（單交易原子）。**transaction.meta 必存 `{cost, reward}`**，供報表分別計入 expense（cost）與 income（reward） | cost≤balance；D1 攤專用 |
 | `deposit` | balance -= amount；deposit_balance += amount | amount≤balance、market_open |
 | `withdraw` | deposit_balance -= amount；balance += amount（amount=-1 代表全部） | amount≤deposit_balance、market_open |
-| `credit_kp` | kingdom_points += amount（見證固定 1000） | **去重** `witness_log` unique(student_uid, staff_uid)；已給 → ok=false |
-| `donate` | balance -= amount；kingdom_points += amount（二三天同一套，**無 D3 bonus**） | amount≥50、balance≥amount、market_open |
-| `exchange_points` | balance -= tier；points += TIER_MAP[tier] | tier∈{500,1000,2500,4000,7500}、balance≥tier、market_open |
-| `guild_draw` | balance -= 300，隨機派任務（見 §3） | balance≥300、market_open、最多同時 3 個 pending（累加不覆蓋） |
+| `credit_kp` | kingdom_points += amount（見證固定 100） | **去重** `witness_log` unique(student_uid, staff_uid)；已給 → ok=false |
+| `donate` | balance -= amount；kingdom_points += amount（二三天同一套，**無 D3 bonus**） | amount>0、balance≥amount、market_open |
+| `exchange_points` | balance -= tier；points += TIER_MAP[tier] | tier∈{100,250,400,750}、balance≥tier、market_open |
+| `guild_draw` | balance -= 100，隨機派任務（見 §3） | balance≥100、market_open、最多同時 3 個 pending（累加不覆蓋） |
+| `transfer` | src.balance -= amount；dst.balance += amount（兩學生對轉，無手續費無上限） | amount>0、from≠to、src.balance≥amount、market_open |
 
 **積分兌換對照表**
 
 ```python
-TIER_MAP = {500:500, 1000:1000, 2500:3000, 4000:5000, 7500:10000}
+TIER_MAP = {100:100, 250:300, 400:500, 750:1000}
 ```
 
 ### 2.3 感謝卡 KP（郵政核銷，加給寄件人）
@@ -107,9 +108,9 @@ TIER_MAP = {500:500, 1000:1000, 2500:3000, 4000:5000, 7500:10000}
 > **設計變更**：雜貨店**不再即時加 KP**。買感謝卡＝純 `debit`（花現金買商品）。感謝卡 KP 改由**郵政同工**後台核銷，依卡上**寄件人名字**加給寄件人。
 
 - 學生在雜貨店買卡（debit）→ 寫感謝話＋**自己名字（寄件人）**→ 投郵筒。
-- 郵政同工整理分發卡片時，逐張用 app `mail_kp` 登記：輸入**寄件人名字**→ by-name 反查 → 選定 uid → 卡數 n → `kingdom_points += 200×n`（給寄件人），`card_count += n`，**不限張數**。
+- 郵政同工整理分發卡片時，逐張用 app `mail_kp` 登記：輸入**寄件人名字**→ by-name 反查 → 選定 uid → 卡數 n → `kingdom_points += 100×n`（給寄件人），`card_count += n`，**不限張數**。
 - 卡上**沒寫名字 → 無法 by-name 反查 → 不登記、不加 KP**。
-- 寫一筆 `action=mail_kp` 的 transaction，`kp_after` 反映 +200×n。
+- 寫一筆 `action=mail_kp` 的 transaction，`kp_after` 反映 +100×n。
 
 **by-name 反查 endpoint（非 NFC，紙本卡無 UID）**
 
@@ -158,22 +159,22 @@ POST /api/scan {action:guild_draw, uid, stall_id:'guild', staff_uid}
 
 原子流程：
 
-1. 先掃該生逾時 pending（≥10 分）→ `expired` 作廢、不扣錢。
+1. 先掃該生逾時 pending（≥8 分）→ `expired` 作廢、不扣錢。
 2. 現有 pending 已達 **3** 個？是 → ok=false「先完成再抽」。
-3. balance ≥ 300？否 → ok=false。
-4. balance -= 300（手續費，以抽取次數計）。
+3. balance ≥ 100？否 → ok=false。
+4. balance -= 100（手續費，以抽取次數計）。
 5. 從 9 款池 **uniform random** 抽 1，**累加**寫 `guild_tasks(uid, game_key, difficulty, reward, status=pending, drawn_at)`（不覆蓋舊任務）。
-6. message 例：`派發任務：投籃高手（中・獎勵900）　限10分　手上 n/3`，回 StudentState + `assigned_game`。
+6. message 例：`派發任務：投籃高手（中・獎勵160）　限8分　手上 n/3`，回 StudentState + `assigned_game`。
 
 **抽取池（9 款，均勻隨機）**
 
 | 難度 | 固定獎勵 | 款數 | 遊戲 |
 |---|---|---|---|
-| 低 | 600 | 3 | 顏色分類、終極密碼、搬家人工 |
-| 中 | 900 | 5 | 投籃高手、丟紙飛機、拍氣球、比手畫腳、記憶翻牌 |
-| 高 | 1300 | 1 | 七巧板 |
+| 低 | 130 | 2 | 終極密碼、搬家人工 |
+| 中 | 160 | 5 | 投籃高手、丟紙飛機、拍氣球、比手畫腳、記憶翻牌 |
+| 高 | 200 | 2 | 顏色分類、七巧板 |
 
-> 期望獎勵 844.44、每抽淨值 +544.44；重抽期望 −55.56（SOT §3），自帶剎車。逾時作廢不扣錢（手續費已收）。
+> 期望獎勵 162.22、每抽淨值 +62.22；重抽期望 −67.78（SOT §3），自帶剎車。逾時作廢不扣錢（手續費已收）。
 
 ### 3.2 小遊戲攤看 pending
 
@@ -206,8 +207,8 @@ POST /api/guild/complete {student_uid, stall_id, staff_uid}
 ```
 POST /api/casino/open   {table:'21'|'dice', stall_id} → {round_id, status:'open'}
 POST /api/casino/bet    {round_id, uid, bet_type, amount}
-        # 21:  bet_type 固定 'play'；amount 50–500
-        # dice: bet_type ∈ 'big'|'small'|'seven'；amount 50–500
+        # 21:  bet_type 固定 'play'；amount 10–100
+        # dice: bet_type ∈ 'big'|'small'|'seven'；amount 10–100
         → {ok, student_name, balance, table_bets:[...]}
         # 下注即原子凍結：balance -= amount，寫 casino_bet(status=placed)
 POST /api/casino/cancel {round_id, uid}                # 退注退款（改注用）
@@ -240,7 +241,7 @@ GET  /api/casino/round/{id}                            # 續桌
 
 **結算實作**：下注時已扣 amount。命中者 `balance += amount×2`（small/big）或 `amount×5`（seven）；未命中不動。每注寫一筆 transaction，整桌一筆 `casino_round`，全部在單一 transaction。
 
-**桌限驗證**（bet 時）：50 ≤ amount ≤ 500、amount ≤ balance、市場開、同一 round 同一 uid 僅一注（除非先 cancel）。
+**桌限驗證**（bet 時）：10 ≤ amount ≤ 100、amount ≤ balance、市場開、同一 round 同一 uid 僅一注（除非先 cancel）。
 
 ---
 
@@ -274,7 +275,7 @@ GET  /api/admin/state                    # current_day, market_open, settlement_
 
 ## 6. 營前建表（seed_import.py）
 
-CSV/Excel 匯入欄位：`name, uid, seed_amount`（seed ∈ {5000,2000,1000}，按才幹固定分派：每組 1人5000、2人1000、其餘2000，非隨機）。
+CSV/Excel 匯入欄位：`name, uid, seed_amount`（seed ∈ {5000,2000,1000}，按才幹固定分派：每組 1人5000、1人1000、其餘2000，非隨機）。
 
 ```
 POST /api/admin/import   (multipart csv)        # 或 CLI: python seed_import.py students.csv
@@ -330,7 +331,7 @@ GET /api/report/all              # 批次：產所有人 HTML（zip 或逐頁）
   "points_curve": [], "kp_curve": [],
   "ledger": [
     {"ts":"...", "stall":"舊鞋救命","action":"donate","amount":-100,
-     "balance_after":380,"note":"奉獻→KP+1000"}
+     "balance_after":380,"note":"奉獻→KP+100"}
   ]
 }
 ```
@@ -340,9 +341,9 @@ GET /api/report/all              # 批次：產所有人 HTML（zip 或逐頁）
 | 欄位 | 計算 |
 |---|---|
 | `total_income` | Σ amount of credit / **game_settle `meta.reward`** / guild_complete / interest / **賭場淨彩金（payout − 原始 bet 本金，不含退回本金）**。賭場以淨輸贏入帳，避免把整筆 payout（含退回本金）計入而灌大毛額 |
-| `total_expense` | Σ |amount| of debit / **meal（餐費）** / **game_settle `meta.cost`（固定 100）** / donate / exchange / casino lose / 公會手續費 300（deposit 不計） |
+| `total_expense` | Σ |amount| of debit / **meal（餐費）** / **game_settle `meta.cost`（固定 100）** / donate / exchange / casino lose / 公會手續費 100（deposit 不計） |
 | `roi_pct`（建議直觀版） | `(total_income − total_expense) / seed × 100`，另列「最終總積分」「總 KP」獨立呈現 |
-| `kingdom_points`（總 KP） | Σ KP 類交易：`donate` / `credit_kp`（聽見證 +1000）/ **`mail_kp`（郵政感謝卡核銷 +200×n）**。買感謝卡的 `debit` 不加 KP（已改郵政核銷）；回應卡已取消 |
+| `kingdom_points`（總 KP） | Σ KP 類交易：`donate` / `credit_kp`（聽見證 +100）/ **`mail_kp`（郵政感謝卡核銷 +100×n）**。買感謝卡的 `debit` 不加 KP（已改郵政核銷）；回應卡已取消 |
 
 ### 7.2 HTML + 圖表產法（建議）
 
@@ -352,7 +353,7 @@ GET /api/report/all              # 批次：產所有人 HTML（zip 或逐頁）
 
 **report.html 區塊**
 
-1. 抬頭：姓名 + UID + 抽籤起始金。
+1. 抬頭：姓名 + UID + 起始金。
 2. 兩軌成績：最終總積分（名次）｜總天國點數（名次）。
 3. KPI 卡：總 income / 總花費 / ROI / 已兌換積分 / 剩餘現金折算 / 定存本利。
 4. 三張曲線圖（SVG）：總資產時間軸（balance_after + deposit_after，或加第二條定存軌；不可只畫現金，否則搬進定存會誤顯為虧損）、積分變化、天國點數變化。
@@ -385,9 +386,10 @@ GET /api/report/all              # 批次：產所有人 HTML（zip 或逐頁）
 | `meal` | 新增 | 餐費扣款（debit 類，預設150、計入 total_expense） |
 | `game_settle` | 沿用 | D1 技能攤單交易結算 |
 | `deposit` `withdraw` | 新增 | 銀行定存／提領 |
-| `credit_kp` | 新增 | 聽見證 +1000（雜貨店不再經此加 KP） |
-| `mail_kp` | 新增 | 郵政感謝卡核銷，by-name 反查寄件人，+200×n KP（不限張數） |
+| `credit_kp` | 新增 | 聽見證 +100（雜貨店不再經此加 KP） |
+| `mail_kp` | 新增 | 郵政感謝卡核銷，by-name 反查寄件人，+100×n KP（不限張數） |
 | `exchange_points`（積分） | 新增 | 依 TIER_MAP 兌換 |
-| `donate` | 新增 | 奉獻 1:1 轉 KP（下限 50，無 D3 bonus） |
-| `guild_draw` / `guild_complete` | 新增 | 公會抽取 −300 / 固定獎勵入帳 |
+| `donate` | 新增 | 奉獻 1:1 轉 KP（無下限，>0 即可，無 D3 bonus） |
+| `guild_draw` / `guild_complete` | 新增 | 公會抽取 −100 / 固定獎勵入帳 |
+| `transfer` | 新增 | 銀行轉帳：兩學生對轉，無手續費無上限 |
 | `interest` `market_close` | 新增 | 管理：結息／市場關閉 |

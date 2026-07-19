@@ -171,7 +171,7 @@ echo "GCP_SA_EMAIL     = $SA_EMAIL"
 
 CSV 欄位：`name,uid,seed_amount[,group,seat_no]`。
 - `uid`：**大寫、冒號分隔**，要跟 App `nfc_service` 讀出的格式一致（例 `04:73:1B:D3:47:02:89`）。
-- `seed_amount`：抽籤起始金 **500 / 400 / 300**（才幹 5/2/1）。
+- `seed_amount`：起始金 **5000 / 2000 / 1000**（才幹 5/2/1）。**非抽籤、非隨機**——每組固定 1人5000、1人1000、其餘全部2000（≈1:8:1，見 `docs/01-經濟與平衡模型.md` §0.1）。
 - `group`/`seat_no`：可選，郵政 by-name 同名消歧用。
 - 重複 uid 自動 skip。
 
@@ -192,7 +192,7 @@ curl -F file=@students.csv http://104.199.226.128:8080/api/admin/import
 - `backend/students.example.csv` — 正式名單格式範本。
 
 > ⏳ **報名未截止** — 正式 UID 名單之後補。流程：報名完 → 綁卡蒐集 UID
-> （感應 → 輸入姓名 → 選抽籤金額 → `POST /api/admin/bind`，或整理成 CSV 跑 seed_import）
+> （感應 → 輸入姓名 → 依組內比例選起始金 → `POST /api/admin/bind`，或整理成 CSV 跑 seed_import）
 > → 匯入。**營前記得先清測試資料**：
 > ```bash
 > # VM 內：清掉測試帳號 + 任何測試交易，重來

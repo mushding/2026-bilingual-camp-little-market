@@ -33,6 +33,12 @@ class ScanReq(BaseModel):
     staff_uid: str | None = None
 
 
+class TransferReq(BaseModel):
+    from_uid: str
+    to_uid: str
+    amount: int
+
+
 class BindReq(BaseModel):
     uid: str
     name: str
