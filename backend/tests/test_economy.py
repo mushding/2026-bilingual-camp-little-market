@@ -21,7 +21,7 @@ db.SessionLocal = sessionmaker(bind=db.engine, expire_on_commit=False, future=Tr
 import models  # noqa: E402
 from constants import TIER_MAP  # noqa: E402
 from schemas import ScanReq  # noqa: E402
-from services import bank, casino  # noqa: E402
+from services import bank, casino, topic1  # noqa: E402
 from services.txn import handle_scan  # noqa: E402
 
 db.Base.metadata.create_all(db.engine)
@@ -35,11 +35,11 @@ def fresh_state(market_open=1, day="D2"):
                                settlement_count=0, settled_days="[]"))
 
 
-def add_student(uid, seed=500):
+def add_student(uid, seed=500, group=None):
     with S.begin() as s:
         if s.get(models.Student, uid):
             return
-        s.add(models.Student(uid=uid, name="測試", seed_amount=seed, balance=seed))
+        s.add(models.Student(uid=uid, name="測試", seed_amount=seed, balance=seed, group=group))
 
 
 def scan(**kw):
@@ -199,6 +199,29 @@ def test_bank_transfer():
     with S.begin() as s:
         blocked = bank.transfer(s, "TA", "TB", 10)
     assert blocked["ok"] is False
+
+
+def test_topic1_group_credit():
+    fresh_state()
+    add_student("G1A", 1000, group="1")
+    add_student("G1B", 2000, group="1")
+    add_student("G2A", 5000, group="2")
+    with S.begin() as s:
+        groups = topic1.list_groups(s)
+    assert {"group": "1", "count": 2} in groups and {"group": "2", "count": 1} in groups
+    with S.begin() as s:
+        out = topic1.group_credit(s, "1", 300, "島嶼變裝祭")
+    assert out["ok"] is True and out["count"] == 2
+    with S.begin() as s:
+        assert s.get(models.Student, "G1A").balance == 1300
+        assert s.get(models.Student, "G1B").balance == 2300
+        assert s.get(models.Student, "G2A").balance == 5000  # 其他組不受影響
+    with S.begin() as s:
+        bad = topic1.group_credit(s, "no-such-group", 100)
+    assert bad["ok"] is False
+    with S.begin() as s:
+        zero = topic1.group_credit(s, "1", 0)
+    assert zero["ok"] is False
 
 
 def test_reset_all():

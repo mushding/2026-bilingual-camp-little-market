@@ -17,6 +17,7 @@ import 'guild_pending_screen.dart';
 import 'mail_screen.dart';
 import 'qr_scan_screen.dart';
 import 'settings_screen.dart';
+import 'topic1_screen.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -86,6 +87,7 @@ class _ScanScreenState extends State<ScanScreen> {
   bool get _isGameStall => _stall.id.startsWith('game_');
   bool get _isMail => _stall.id == 'mail';
   bool get _isBank => _stall.id == 'bank';
+  bool get _isTopic1 => _stall.id == 'topic1';
 
   Future<void> _scan() async {
     setState(() {
@@ -438,6 +440,9 @@ class _ScanScreenState extends State<ScanScreen> {
         });
     if (_isMail) return _entryButton('郵政感謝卡登記', Icons.mail, () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const MailScreen()));
+        });
+    if (_isTopic1) return _entryButton('選小組整組加錢', Icons.groups, () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const Topic1Screen()));
         });
 
     // 標準掃卡流程

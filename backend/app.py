@@ -16,7 +16,7 @@ WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 import auth
 import schemas
 from db import SessionLocal, init_db
-from services import bank, casino, guild, report
+from services import bank, casino, guild, report, topic1
 from services.txn import handle_scan
 
 
@@ -103,6 +103,19 @@ def students_search(name: str = Query(...)):
 def bank_transfer(req: schemas.TransferReq):
     with SessionLocal.begin() as s:
         return bank.transfer(s, req.from_uid, req.to_uid, req.amount)
+
+
+# ── 主題一（Day1 大地遊戲：整組加錢） ──────────────────────────────────────
+@app.get("/api/topic1/groups")
+def topic1_groups():
+    with SessionLocal() as s:
+        return topic1.list_groups(s)
+
+
+@app.post("/api/topic1/credit")
+def topic1_credit(req: schemas.Topic1CreditReq):
+    with SessionLocal.begin() as s:
+        return topic1.group_credit(s, req.group, req.amount, req.game_label)
 
 
 # ── 公會 ────────────────────────────────────────────────────────────────

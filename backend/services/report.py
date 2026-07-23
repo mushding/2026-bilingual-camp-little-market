@@ -10,7 +10,7 @@ from sqlalchemy import select
 from models import Student, Transaction
 
 # 入帳類 / 出帳類 action 分類（casino_bet/cancel 排除：只是凍結/退款，僅影響餘額曲線）
-INCOME_ACTIONS = {"credit", "guild_complete", "interest", "transfer_in"}
+INCOME_ACTIONS = {"credit", "guild_complete", "interest", "transfer_in", "topic1_credit"}
 EXPENSE_ACTIONS = {"debit", "meal", "donate", "exchange_points", "guild_draw", "task_expired",
                    "transfer_out"}
 KP_ACTIONS = {"donate", "credit_kp", "mail_kp", "transfer_out"}
@@ -25,7 +25,7 @@ STALL_NAMES = {
     "game_color": "顏色分類", "game_password": "終極密碼", "game_moving": "搬家人工",
     "game_basketball": "投籃高手", "game_plane": "丟紙飛機", "game_balloon": "拍氣球",
     "game_charades": "比手畫腳", "game_memory": "記憶翻牌", "game_tangram": "七巧板",
-    "system": "系統",
+    "topic1": "主題一：大地遊戲", "system": "系統",
 }
 # action → 中文動作名
 ACTION_NAMES = {
@@ -36,6 +36,7 @@ ACTION_NAMES = {
     "casino_cancel": "賭場退注", "credit_kp": "天國點數", "mail_kp": "感謝卡核銷",
     "task_expired": "任務逾時", "market_close": "市場結算折現",
     "transfer_out": "轉帳轉出", "transfer_in": "轉帳轉入",
+    "topic1_credit": "主題一：闖關獎金",
 }
 def _stall_zh(sid): return STALL_NAMES.get(sid or "", sid or "—")
 def _action_zh(a): return ACTION_NAMES.get(a, a)

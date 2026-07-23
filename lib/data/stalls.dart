@@ -29,6 +29,7 @@ const _games = {
 
 final List<Stall> kStalls = [
   // Day1 技能攤（只有 D1）
+  const Stall('topic1', '主題一：大地遊戲', [], _d1),
   const Stall('day1_doll', '賣娃娃', [TxnType.day1SellDoll], _d1),
   const Stall('day1_ring', '套圈圈', [TxnType.day1RingToss], _d1),
   const Stall('day1_dart', '射飛鏢', [TxnType.day1Dart], _d1),

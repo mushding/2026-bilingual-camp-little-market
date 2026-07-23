@@ -71,6 +71,20 @@ class ApiClient {
     return StudentState.fromJson(await _post('/api/scan', body));
   }
 
+  // ── 主題一（Day1 大地遊戲：整組加錢） ──────────────────────────────────
+  static Future<List<Map<String, dynamic>>> topic1Groups() async {
+    final r = await _get('/api/topic1/groups');
+    return (r as List).cast<Map<String, dynamic>>();
+  }
+
+  static Future<Map<String, dynamic>> topic1Credit({
+    required String group,
+    required int amount,
+    String gameLabel = '',
+  }) =>
+      _post('/api/topic1/credit',
+          {'group': group, 'amount': amount, 'game_label': gameLabel});
+
   // ── 銀行轉帳 ────────────────────────────────────────────────────────────
   static Future<Map<String, dynamic>> bankTransfer({
     required String fromUid,

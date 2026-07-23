@@ -39,6 +39,12 @@ class TransferReq(BaseModel):
     amount: int
 
 
+class Topic1CreditReq(BaseModel):
+    group: str
+    amount: int
+    game_label: str = ""
+
+
 class BindReq(BaseModel):
     uid: str
     name: str
