@@ -75,6 +75,10 @@
 	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
 	<array/>
 
+	<!-- ===== QR 備援（無 NFC 手機） ===== -->
+	<key>NSCameraUsageDescription</key>
+	<string>掃卡片上的 QR code 貼紙，讀取學員 UID（NFC 備援方案）</string>
+
 	<!-- ===== ATS：允許 LAN 明文 HTTP 連 backend ===== -->
 	<!-- 攤位 PoC 用本機 uvicorn :8000，不可能掛 TLS。production 才補 https -->
 	<key>NSAppTransportSecurity</key>

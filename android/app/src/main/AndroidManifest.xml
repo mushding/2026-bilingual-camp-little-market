@@ -3,9 +3,13 @@
     <!-- 連後端 API（release build 不會自動加，必須宣告，否則 Failed host lookup） -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- NFC permission + feature -->
+    <!-- NFC permission + feature（required=false：部分關主手機無 NFC，靠 QR 備援） -->
     <uses-permission android:name="android.permission.NFC" />
-    <uses-feature android:name="android.hardware.nfc" android:required="true" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
+
+    <!-- QR code 備援掃描 -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- HTTP cleartext PoC：允許 LAN 內 http://192.168.* / 10.0.2.2 -->
     <application

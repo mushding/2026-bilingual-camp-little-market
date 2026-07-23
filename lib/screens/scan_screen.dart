@@ -15,6 +15,7 @@ import 'bank_transfer_screen.dart';
 import 'casino_table_screen.dart';
 import 'guild_pending_screen.dart';
 import 'mail_screen.dart';
+import 'qr_scan_screen.dart';
 import 'settings_screen.dart';
 
 class ScanScreen extends StatefulWidget {
@@ -100,18 +101,41 @@ class _ScanScreenState extends State<ScanScreen> {
         setState(() => _state = _S.idle);
         return;
       }
-      final s = await ApiClient.scan(uid: uid, stallId: _stall.id, action: 'lookup');
-      setState(() {
-        _student = s;
-        _txn = _allowed.firstWhere((t) => t != TxnType.lookup,
-            orElse: () => TxnType.lookup);
-        _state = _S.loaded;
-      });
-      if (!s.ok) _showBanner(s.message, false);
+      await _lookup(uid);
     } catch (e) {
       _showBanner('$e', false);
       setState(() => _state = _S.idle);
     }
+  }
+
+  /// QR code 備援：手機無 NFC 時，掃卡片上的 QR 貼紙（內容＝UID）。
+  Future<void> _scanQr() async {
+    final uid = await Navigator.push<String>(
+        context, MaterialPageRoute(builder: (_) => const QrScanScreen()));
+    if (uid == null) return;
+    setState(() {
+      _state = _S.reading;
+      _student = null;
+      _txn = null;
+      _banner = null;
+    });
+    try {
+      await _lookup(uid);
+    } catch (e) {
+      _showBanner('$e', false);
+      setState(() => _state = _S.idle);
+    }
+  }
+
+  Future<void> _lookup(String uid) async {
+    final s = await ApiClient.scan(uid: uid, stallId: _stall.id, action: 'lookup');
+    setState(() {
+      _student = s;
+      _txn = _allowed.firstWhere((t) => t != TxnType.lookup,
+          orElse: () => TxnType.lookup);
+      _state = _S.loaded;
+    });
+    if (!s.ok) _showBanner(s.message, false);
   }
 
   void _showBanner(String msg, bool ok) {
@@ -447,6 +471,8 @@ class _ScanScreenState extends State<ScanScreen> {
           const SizedBox(height: 8),
         ],
         _scanButton(),
+        const SizedBox(height: 8),
+        _qrScanButton(),
       ]);
     }
 
@@ -493,6 +519,16 @@ class _ScanScreenState extends State<ScanScreen> {
         label: const Padding(
           padding: EdgeInsets.symmetric(vertical: 18),
           child: Text('掃 卡', style: TextStyle(fontSize: 22, letterSpacing: 4)),
+        ),
+      );
+
+  /// 手機沒 NFC 感應：改掃卡片上的 QR 貼紙。
+  Widget _qrScanButton() => OutlinedButton.icon(
+        onPressed: _state == _S.reading ? null : _scanQr,
+        icon: const Icon(Icons.qr_code_scanner, size: 24),
+        label: const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Text('手機沒 NFC？掃 QR Code', style: TextStyle(fontSize: 15)),
         ),
       );
 
