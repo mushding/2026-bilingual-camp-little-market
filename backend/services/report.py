@@ -4,10 +4,24 @@
 """
 import html
 import json
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 
 from models import Student, Transaction
+
+TAIPEI = timezone(timedelta(hours=8))  # 台灣全年 UTC+8，無日光節約，免查 zoneinfo
+
+
+def _local(ts: str) -> str:
+    """UTC ISO 字串（now_iso() 寫入的格式）→ 台灣時間 'MM-DD HH:MM'（給報表顯示用）。
+    資料庫一律存 UTC；只有這裡、顯示當下才轉時區——不要去改 GCE 系統時區，
+    程式裡 datetime.now(timezone.utc) 不受 OS 時區設定影響，改了也沒用。"""
+    try:
+        dt = datetime.fromisoformat(ts).astimezone(TAIPEI)
+    except (ValueError, TypeError):
+        return ts[5:16].replace("T", " ") if ts else ""
+    return dt.strftime("%m-%d %H:%M")
 
 # 入帳類 / 出帳類 action 分類（casino_bet/cancel 排除：只是凍結/退款，僅影響餘額曲線）
 INCOME_ACTIONS = {"credit", "guild_complete", "interest", "transfer_in", "topic1_credit"}
@@ -80,17 +94,22 @@ def build_data(session, uid: str) -> dict | None:
                               "deposit": t.deposit_after})
         points_curve.append({"ts": t.created_at, "points": t.points_after})
         kp_curve.append({"ts": t.created_at, "kp": t.kp_after})
-        ledger.append({"ts": t.created_at, "stall": t.stall_id, "action": a,
+        # 賭場輸的那筆 casino_payout：下注當下已扣款，這筆本身不再變動餘額，
+        # 只是為了讓總花費/ROI 統計正確而寫的紀錄——印在明細表只會讓人誤以為扣兩次錢，跳過不顯示。
+        if a == "casino_payout" and not meta.get("win", True):
+            continue
+        ledger.append({"ts": _local(t.created_at), "stall": t.stall_id, "action": a,
                        "amount": t.amount, "balance_after": t.balance_after,
                        "day": t.day})
 
     seed = s.seed_amount or 0
     roi = round((total_income - total_expense) / seed * 100, 1) if seed else 0.0
+    rank_points, rank_kp = live_ranks(session, s.uid)
 
     return {
-        "uid": s.uid, "name": s.name, "seed": seed,
+        "uid": s.uid, "card_uid": s.card_uid, "name": s.name, "seed": seed,
         "final_points": s.points, "kingdom_points": s.kingdom_points,
-        "rank_points": s.final_rank_points, "rank_kp": s.final_rank_kp,
+        "rank_points": rank_points, "rank_kp": rank_kp,
         "total_income": total_income, "total_expense": total_expense,
         "roi_pct": roi, "exchanged_points": exchanged_points,
         "residual_cash_to_points": residual, "deposit_final": s.deposit_balance,
@@ -99,8 +118,19 @@ def build_data(session, uid: str) -> dict | None:
     }
 
 
+def live_ranks(session, uid: str) -> tuple[int | None, int | None]:
+    """即時名次（積分榜／管家獎），依目前全體已綁卡學生現況即算即回，不等 market_close。"""
+    studs = session.scalars(select(Student).where(Student.card_uid.is_not(None))).all()
+    by_points = sorted(studs, key=lambda x: x.points, reverse=True)
+    by_kp = sorted(studs, key=lambda x: x.kingdom_points, reverse=True)
+    rp = next((i for i, x in enumerate(by_points, 1) if x.uid == uid), None)
+    rk = next((i for i, x in enumerate(by_kp, 1) if x.uid == uid), None)
+    return rp, rk
+
+
 def compute_ranks(session):
-    """market_close 後一次性算名次寫回快取。未綁卡者不排名次。"""
+    """market_close 後把名次「凍結」寫回快取（供 dashboard 等其他頁面顯示定案排名）。
+    report 本身已改用 live_ranks() 即時算，不依賴這裡的快取。"""
     studs = session.scalars(select(Student).where(Student.card_uid.is_not(None))).all()
     for i, s in enumerate(sorted(studs, key=lambda x: x.points, reverse=True), 1):
         s.final_rank_points = i
@@ -257,7 +287,7 @@ def _render_body(data: dict) -> str:
     kps = [p["kp"] for p in data["kp_curve"]]
 
     rows = "".join(
-        f'<tr><td>{esc(l["ts"][5:16].replace("T"," "))}</td>'
+        f'<tr><td>{esc(l["ts"])}</td>'
         f'<td>{esc(l["day"])}</td>'
         f'<td><span class="tag">{esc(_stall_zh(l["stall"]))}</span></td>'
         f'<td>{esc(_action_zh(l["action"]))}</td>'
@@ -285,7 +315,7 @@ def _render_body(data: dict) -> str:
   </div>
   <div class="meta">
     <div class="theme">主題 · {_THEME}</div>
-    UID {esc(data['uid'])}<br>起始金 ${data['seed']}
+    UID {esc(data['card_uid'] or '未綁卡')}<br>起始金 ${data['seed']}
   </div>
 </div>
 
