@@ -168,10 +168,10 @@ class ApiClient {
       await _get('/api/admin/roster') as Map<String, dynamic>;
 
   static Future<Map<String, dynamic>> rosterBind({
-    required int rosterId,
     required String uid,
+    required String cardUid,
   }) =>
-      _post('/api/admin/roster/bind', {'roster_id': rosterId, 'uid': uid});
+      _post('/api/admin/roster/bind', {'uid': uid, 'card_uid': cardUid});
 
   static Future<Map<String, dynamic>> adminBind({
     required String uid,

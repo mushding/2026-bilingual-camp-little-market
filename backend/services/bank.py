@@ -75,7 +75,7 @@ def market_close(session) -> dict:
     if not st.market_open:
         return {"ok": False, "message": "市場已關閉"}
     affected = 0
-    for s in session.scalars(select(Student)):
+    for s in session.scalars(select(Student).where(Student.card_uid.is_not(None))):
         taxable = s.balance + s.deposit_balance
         converted = math.floor(taxable * MARKET_CLOSE_RATE)
         s.points += converted
@@ -92,7 +92,7 @@ def reset_all(session) -> dict:
     """測試用全重置：學員回起始金、清空所有帳本/任務/賭局/見證、天數回 D1、市場重開。
     保留學員名單與裝置註冊（device_tokens）。不可復原。"""
     n = 0
-    for s in session.scalars(select(Student)):
+    for s in session.scalars(select(Student).where(Student.card_uid.is_not(None))):
         s.balance = s.seed_amount
         s.points = 0
         s.kingdom_points = 0
@@ -121,8 +121,9 @@ def admin_state(session) -> dict:
 
 
 def dashboard(session) -> dict:
-    """後台即時總覽：全域狀態 + 每位學生現況 + 彙總。"""
-    studs = session.scalars(select(Student).order_by(Student.points.desc())).all()
+    """後台即時總覽：全域狀態 + 每位已綁卡學生現況 + 彙總。未綁卡者不算入（尚未真的上場）。"""
+    studs = session.scalars(select(Student).where(Student.card_uid.is_not(None))
+                            .order_by(Student.points.desc())).all()
     # pending 任務數（一次查全部，避免 N+1）
     pend: dict[str, int] = {}
     for t in session.scalars(select(GuildTask).where(GuildTask.status == "pending")):

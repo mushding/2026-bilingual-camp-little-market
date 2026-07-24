@@ -90,7 +90,7 @@ def students_search(name: str = Query(...)):
     from models import Student
     q = name.strip()
     with SessionLocal() as s:
-        stmt = select(Student)
+        stmt = select(Student).where(Student.card_uid.is_not(None))
         if q:
             stmt = stmt.where(Student.name.contains(q))
         rows = s.scalars(stmt.order_by(Student.name).limit(50)).all()
@@ -230,7 +230,7 @@ def admin_bind(req: schemas.BindReq):
     with SessionLocal.begin() as s:
         if s.get(Student, req.uid):
             return {"ok": False, "message": "UID 已綁定", "uid": req.uid}
-        s.add(Student(uid=req.uid, name=req.name, seed_amount=req.seed_amount,
+        s.add(Student(uid=req.uid, card_uid=req.uid, name=req.name, seed_amount=req.seed_amount,
                       balance=req.seed_amount, group=req.group, seat_no=req.seat_no,
                       created_at=datetime.now(timezone.utc).isoformat(timespec="seconds")))
         return {"ok": True, "uid": req.uid, "name": req.name, "seed_amount": req.seed_amount}
@@ -269,25 +269,25 @@ def roster_add(req: schemas.RosterAddReq):
 @app.post("/api/admin/roster/bind")
 def roster_bind(req: schemas.RosterBindReq):
     with SessionLocal.begin() as s:
-        return roster.bind(s, req.roster_id, req.uid)
+        return roster.bind(s, req.uid, req.card_uid)
 
 
 @app.post("/api/admin/roster/unbind")
 def roster_unbind(req: schemas.RosterUnbindReq):
     with SessionLocal.begin() as s:
-        return roster.unbind(s, req.roster_id)
+        return roster.unbind(s, req.uid)
 
 
 @app.post("/api/admin/roster/set_group")
 def roster_set_group(req: schemas.RosterSetGroupReq):
     with SessionLocal.begin() as s:
-        return roster.set_group(s, req.roster_id, req.group)
+        return roster.set_group(s, req.uid, req.group)
 
 
-@app.delete("/api/admin/roster/{roster_id}")
-def roster_delete(roster_id: int):
+@app.delete("/api/admin/roster/{uid}")
+def roster_delete(uid: str):
     with SessionLocal.begin() as s:
-        return roster.delete(s, roster_id)
+        return roster.delete(s, uid)
 
 
 @app.get("/api/admin/qr-cards", response_class=HTMLResponse)
@@ -314,7 +314,7 @@ async def admin_import(file: UploadFile):
                     skipped += 1
                     continue
                 seed = int(row["seed_amount"])
-                s.add(Student(uid=uid, name=row["name"].strip(), seed_amount=seed,
+                s.add(Student(uid=uid, card_uid=uid, name=row["name"].strip(), seed_amount=seed,
                               balance=seed, group=row.get("group"), seat_no=row.get("seat_no"),
                               created_at=datetime.now(timezone.utc).isoformat(timespec="seconds")))
                 imported += 1
@@ -330,8 +330,8 @@ def report_all_print():
     from sqlalchemy import select
     from models import Student
     with SessionLocal() as s:
-        uids = s.scalars(select(Student).order_by(Student.final_rank_points,
-                                                  Student.name)).all()
+        uids = s.scalars(select(Student).where(Student.card_uid.is_not(None))
+                        .order_by(Student.final_rank_points, Student.name)).all()
         datas = [report.build_data(s, x.uid) for x in uids]
         return report.render_all([d for d in datas if d])
 
@@ -360,7 +360,7 @@ def report_all():
     from sqlalchemy import select
     from models import Student
     with SessionLocal() as s:
-        studs = s.scalars(select(Student)).all()
+        studs = s.scalars(select(Student).where(Student.card_uid.is_not(None))).all()
         return JSONResponse([
             {"uid": x.uid, "name": x.name, "final_points": x.points,
              "kingdom_points": x.kingdom_points, "report": f"/api/report/{x.uid}"}

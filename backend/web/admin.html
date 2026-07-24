@@ -348,13 +348,13 @@ function renderRoster() {
     }
     html += `<tr>
       <td class="l">${r.bound ? '✅' : '❌'} ${r.name}</td>
-      <td class="l"><select onchange="rosterSetGroup(${r.id}, this)">${groupOptions(r.group)}</select></td>
+      <td class="l"><select onchange="rosterSetGroup('${r.uid}', this)">${groupOptions(r.group)}</select></td>
       <td class="l">${r.seat_no || ''}</td>
       <td class="l num">${r.seed_amount}</td>
-      <td class="l" style="font-family:monospace">${r.uid || '<span class="err">未綁定</span>'}</td>
+      <td class="l" style="font-family:monospace">${r.card_uid || '<span class="err">未綁定</span>'}</td>
       <td>${r.bound
-        ? `<button onclick="rosterUnbind(${r.id},'${r.name}')">解綁</button>`
-        : `<button class="danger" onclick="rosterDel(${r.id},'${r.name}')">刪除</button>`}</td>
+        ? `<button onclick="rosterUnbind('${r.uid}','${r.name}')">解綁</button>`
+        : `<button class="danger" onclick="rosterDel('${r.uid}','${r.name}')">刪除</button>`}</td>
     </tr>`;
   }
   $('#rosterTbl tbody').innerHTML = html;
@@ -367,7 +367,7 @@ async function rosterSetGroup(id, sel) {
     if (!group) { renderRoster(); return; }
   }
   try {
-    await api('/api/admin/roster/set_group', post({ roster_id: id, group }));
+    await api('/api/admin/roster/set_group', post({ uid: id, group }));
     await loadRoster();
   } catch (e) { toast(e.message, true); }
 }
@@ -390,7 +390,7 @@ async function rosterAdd() {
 
 async function rosterUnbind(id, name) {
   if (!confirm(`解綁 ${name} 的卡片？（會刪除該學生帳戶；已有交易則不可解綁）`)) return;
-  try { const r = await api('/api/admin/roster/unbind', post({ roster_id: id }));
+  try { const r = await api('/api/admin/roster/unbind', post({ uid: id }));
         toast(r.ok ? `已解綁 ${name}` : r.message, !r.ok); await loadRoster(); }
   catch (e) { toast(e.message, true); }
 }

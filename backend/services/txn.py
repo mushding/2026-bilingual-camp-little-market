@@ -62,8 +62,9 @@ def err(stall: str, action: str, message: str) -> StudentState:
 
 
 def lock_student(session, uid: str) -> Student | None:
-    """行級鎖（Postgres FOR UPDATE；SQLite 由寫鎖序列化）。"""
-    stmt = select(Student).where(Student.uid == uid)
+    """行級鎖（Postgres FOR UPDATE；SQLite 由寫鎖序列化）。
+    uid 可能是 PK（郵政 by-name 流程無實體卡）或掃到的實體卡號，兩者都要能查到。"""
+    stmt = select(Student).where((Student.uid == uid) | (Student.card_uid == uid))
     if session.bind.dialect.name != "sqlite":
         stmt = stmt.with_for_update()
     return session.scalars(stmt).first()

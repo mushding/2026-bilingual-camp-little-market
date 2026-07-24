@@ -39,7 +39,8 @@ def add_student(uid, seed=500, group=None):
     with S.begin() as s:
         if s.get(models.Student, uid):
             return
-        s.add(models.Student(uid=uid, name="測試", seed_amount=seed, balance=seed, group=group))
+        s.add(models.Student(uid=uid, card_uid=uid, name="測試", seed_amount=seed,
+                            balance=seed, group=group))
 
 
 def scan(**kw):

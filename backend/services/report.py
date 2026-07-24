@@ -100,8 +100,8 @@ def build_data(session, uid: str) -> dict | None:
 
 
 def compute_ranks(session):
-    """market_close 後一次性算名次寫回快取。"""
-    studs = session.scalars(select(Student)).all()
+    """market_close 後一次性算名次寫回快取。未綁卡者不排名次。"""
+    studs = session.scalars(select(Student).where(Student.card_uid.is_not(None))).all()
     for i, s in enumerate(sorted(studs, key=lambda x: x.points, reverse=True), 1):
         s.final_rank_points = i
     for i, s in enumerate(sorted(studs, key=lambda x: x.kingdom_points, reverse=True), 1):

@@ -53,7 +53,7 @@ class _RosterBindScreenState extends State<RosterBindScreen> {
         _snack('掃描取消或讀不到卡', false);
         return;
       }
-      final r = await ApiClient.rosterBind(rosterId: entry['id'] as int, uid: uid);
+      final r = await ApiClient.rosterBind(uid: entry['uid'] as String, cardUid: uid);
       _snack(r['ok'] == true ? '✅ ${entry['name']} 綁定 $uid' : '${r['message']}',
           r['ok'] == true);
       await _refresh();
@@ -100,7 +100,7 @@ class _RosterBindScreenState extends State<RosterBindScreen> {
                         title: Text('${e['name']}'
                             '${(e['seat_no'] as String?)?.isNotEmpty == true ? '（${e['seat_no']}）' : ''}'),
                         subtitle: e['bound'] == true
-                            ? Text('${e['uid']}',
+                            ? Text('${e['card_uid']}',
                                 style: const TextStyle(fontFamily: 'monospace', fontSize: 12))
                             : const Text('點我感應綁卡', style: TextStyle(color: AppColors.brown)),
                         trailing: e['bound'] == true

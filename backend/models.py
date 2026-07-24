@@ -21,18 +21,7 @@ class Student(Base):
     final_rank_kp: Mapped[int | None] = mapped_column(Integer, nullable=True)
     group: Mapped[str | None] = mapped_column(String, nullable=True)   # 小組（消歧）
     seat_no: Mapped[str | None] = mapped_column(String, nullable=True)  # 座號（消歧）
-    created_at: Mapped[str] = mapped_column(String, default="")
-
-
-class Roster(Base):
-    """預先報名名單（報名未定案前先建人）。綁卡後 uid 指向 students.uid。"""
-    __tablename__ = "roster"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    group: Mapped[str | None] = mapped_column(String, nullable=True)
-    seat_no: Mapped[str | None] = mapped_column(String, nullable=True)
-    seed_amount: Mapped[int] = mapped_column(Integer, default=2000)
-    uid: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)  # 已綁卡的 UID
+    card_uid: Mapped[str | None] = mapped_column(String, nullable=True, unique=True, index=True)
     created_at: Mapped[str] = mapped_column(String, default="")
 
 

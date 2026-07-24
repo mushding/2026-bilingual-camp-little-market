@@ -65,16 +65,16 @@ class RosterAddReq(BaseModel):
 
 
 class RosterBindReq(BaseModel):
-    roster_id: int
     uid: str
+    card_uid: str
 
 
 class RosterUnbindReq(BaseModel):
-    roster_id: int
+    uid: str
 
 
 class RosterSetGroupReq(BaseModel):
-    roster_id: int
+    uid: str
     group: str | None = None
 
 

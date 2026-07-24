@@ -1,9 +1,10 @@
-"""預先名單 roster：報名未定案前先建人 → 營會前大量綁卡 → QR 貼紙列印。"""
+"""預先名單 / 大量綁卡：全部操作單一 Student 表。未綁卡 = card_uid IS NULL。"""
+import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import select
 
-from models import Roster, Student, Transaction
+from models import Student, Transaction
 
 
 def _now() -> str:
@@ -12,10 +13,11 @@ def _now() -> str:
 
 def list_all(s) -> dict:
     """全名單（含綁卡狀態），依 group / seat_no / name 排序。"""
-    rows = s.scalars(select(Roster).order_by(Roster.group, Roster.seat_no, Roster.name)).all()
+    rows = s.scalars(select(Student).order_by(Student.group, Student.seat_no,
+                                               Student.name)).all()
     entries = [{
-        "id": r.id, "name": r.name, "group": r.group or "", "seat_no": r.seat_no or "",
-        "seed_amount": r.seed_amount, "uid": r.uid, "bound": r.uid is not None,
+        "uid": r.uid, "name": r.name, "group": r.group or "", "seat_no": r.seat_no or "",
+        "seed_amount": r.seed_amount, "card_uid": r.card_uid, "bound": r.card_uid is not None,
     } for r in rows]
     bound = sum(1 for e in entries if e["bound"])
     return {"total": len(entries), "bound": bound, "unbound": len(entries) - bound,
@@ -23,91 +25,82 @@ def list_all(s) -> dict:
 
 
 def add(s, entries: list) -> dict:
-    """批量新增名單（同名不擋——營隊可能真的有同名，靠組別/座號消歧）。"""
+    """批量新增名單（同名不擋——營隊可能真的有同名，靠組別/座號消歧）。尚未綁卡。"""
     added = 0
     for e in entries:
         name = e.name.strip()
         if not name:
             continue
-        s.add(Roster(name=name, group=(e.group or "").strip() or None,
-                     seat_no=(e.seat_no or "").strip() or None,
-                     seed_amount=e.seed_amount, created_at=_now()))
+        s.add(Student(uid=uuid.uuid4().hex, name=name,
+                      group=(e.group or "").strip() or None,
+                      seat_no=(e.seat_no or "").strip() or None,
+                      seed_amount=e.seed_amount, balance=e.seed_amount,
+                      card_uid=None, created_at=_now()))
         added += 1
     return {"ok": True, "added": added}
 
 
-def bind(s, roster_id: int, uid: str) -> dict:
-    """綁卡：roster 的人 + 卡 UID → 建 Student、記回 roster.uid。"""
-    uid = uid.strip()
-    r = s.get(Roster, roster_id)
-    if r is None:
+def bind(s, uid: str, card_uid: str) -> dict:
+    """綁卡：名單裡的人 + 掃到的卡 UID → 寫回 Student.card_uid。"""
+    card_uid = card_uid.strip()
+    stu = s.get(Student, uid)
+    if stu is None:
         return {"ok": False, "message": "查無此名單項目"}
-    if r.uid:
-        return {"ok": False, "message": f"{r.name} 已綁過卡（{r.uid}），請先解綁"}
-    if s.get(Student, uid):
-        return {"ok": False, "message": "這張卡已綁定其他學生"}
-    other = s.scalars(select(Roster).where(Roster.uid == uid)).first()
+    if stu.card_uid:
+        return {"ok": False, "message": f"{stu.name} 已綁過卡（{stu.card_uid}），請先解綁"}
+    other = s.scalars(select(Student).where(Student.card_uid == card_uid)).first()
     if other:
         return {"ok": False, "message": f"這張卡已綁給 {other.name}"}
-    s.add(Student(uid=uid, name=r.name, seed_amount=r.seed_amount, balance=r.seed_amount,
-                  group=r.group, seat_no=r.seat_no, created_at=_now()))
-    r.uid = uid
-    return {"ok": True, "roster_id": r.id, "name": r.name, "uid": uid}
+    stu.card_uid = card_uid
+    return {"ok": True, "uid": stu.uid, "name": stu.name, "card_uid": card_uid}
 
 
-def set_group(s, roster_id: int, group: str | None) -> dict:
-    """改組別（未分組/分組皆可）。已綁卡的話一併同步 Student.group。"""
-    r = s.get(Roster, roster_id)
-    if r is None:
+def set_group(s, uid: str, group: str | None) -> dict:
+    """改組別（未分組/分組皆可）。"""
+    stu = s.get(Student, uid)
+    if stu is None:
         return {"ok": False, "message": "查無此名單項目"}
     g = (group or "").strip() or None
-    r.group = g
-    if r.uid:
-        stu = s.get(Student, r.uid)
-        if stu:
-            stu.group = g
-    return {"ok": True, "roster_id": r.id, "name": r.name, "group": g or ""}
+    stu.group = g
+    return {"ok": True, "uid": stu.uid, "name": stu.name, "group": g or ""}
 
 
-def unbind(s, roster_id: int) -> dict:
-    """解綁（營會前修正用）：清 roster.uid、刪 Student。已有交易紀錄則拒絕。"""
-    r = s.get(Roster, roster_id)
-    if r is None:
+def unbind(s, uid: str) -> dict:
+    """解綁（營會前修正用）：清 card_uid，身分保留。已有交易紀錄則拒絕。"""
+    stu = s.get(Student, uid)
+    if stu is None:
         return {"ok": False, "message": "查無此名單項目"}
-    if not r.uid:
-        return {"ok": False, "message": f"{r.name} 尚未綁卡"}
-    txn = s.scalars(select(Transaction).where(Transaction.uid == r.uid).limit(1)).first()
+    if not stu.card_uid:
+        return {"ok": False, "message": f"{stu.name} 尚未綁卡"}
+    txn = s.scalars(select(Transaction).where(Transaction.uid == uid).limit(1)).first()
     if txn:
-        return {"ok": False, "message": f"{r.name} 已有交易紀錄，不可解綁"}
-    stu = s.get(Student, r.uid)
-    if stu:
-        s.delete(stu)
-    old = r.uid
-    r.uid = None
-    return {"ok": True, "roster_id": r.id, "name": r.name, "unbound_uid": old}
+        return {"ok": False, "message": f"{stu.name} 已有交易紀錄，不可解綁"}
+    old = stu.card_uid
+    stu.card_uid = None
+    return {"ok": True, "uid": stu.uid, "name": stu.name, "unbound_card_uid": old}
 
 
-def delete(s, roster_id: int) -> dict:
-    r = s.get(Roster, roster_id)
-    if r is None:
+def delete(s, uid: str) -> dict:
+    stu = s.get(Student, uid)
+    if stu is None:
         return {"ok": False, "message": "查無此名單項目"}
-    if r.uid:
-        return {"ok": False, "message": f"{r.name} 已綁卡，請先解綁再刪除"}
-    s.delete(r)
-    return {"ok": True, "deleted": roster_id}
+    if stu.card_uid:
+        return {"ok": False, "message": f"{stu.name} 已綁卡，請先解綁再刪除"}
+    s.delete(stu)
+    return {"ok": True, "deleted": uid}
 
 
 # ── QR 貼紙列印頁（A4，瀏覽器 Ctrl+P → PDF/印出裁切） ──────────────────────
 def qr_sheet(s) -> str:
-    """所有已綁卡學生一人一張 QR 貼紙（內容=UID，同 NFC 讀出格式）。"""
+    """所有已綁卡學生一人一張 QR 貼紙（內容=卡片 UID，同 NFC 讀出格式）。"""
     import qrcode
     import qrcode.image.svg
 
-    studs = s.scalars(select(Student).order_by(Student.group, Student.seat_no,
-                                               Student.name)).all()
+    studs = s.scalars(select(Student).where(Student.card_uid.is_not(None))
+                       .order_by(Student.group, Student.seat_no, Student.name)).all()
     cells = []
     for x in studs:
-        img = qrcode.make(x.uid, image_factory=qrcode.image.svg.SvgPathImage,
+        img = qrcode.make(x.card_uid, image_factory=qrcode.image.svg.SvgPathImage,
                           border=1)
         svg = img.to_string().decode()
         sub = " / ".join(v for v in [x.group, x.seat_no] if v)

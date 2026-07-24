@@ -22,7 +22,7 @@ def main(path: str):
                     skipped += 1
                     continue
                 seed = int(row["seed_amount"])
-                s.add(Student(uid=uid, name=row["name"].strip(), seed_amount=seed,
+                s.add(Student(uid=uid, card_uid=uid, name=row["name"].strip(), seed_amount=seed,
                               balance=seed, group=row.get("group"), seat_no=row.get("seat_no"),
                               created_at=datetime.now(timezone.utc).isoformat(timespec="seconds")))
                 imported += 1

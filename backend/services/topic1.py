@@ -15,6 +15,7 @@ def list_groups(session) -> list[dict]:
     rows = session.execute(
         select(Student.group, func.count()).where(
             Student.group.isnot(None), Student.group != "",
+            Student.card_uid.is_not(None),
         ).group_by(Student.group)
     ).all()
     groups = sorted(rows, key=lambda r: (len(r[0]), r[0]))
@@ -24,7 +25,8 @@ def list_groups(session) -> list[dict]:
 def group_credit(session, group: str, amount: int, game_label: str = "") -> dict:
     if amount <= 0:
         return {"ok": False, "message": "金額需 > 0"}
-    students = session.scalars(select(Student).where(Student.group == group)).all()
+    students = session.scalars(select(Student).where(
+        Student.group == group, Student.card_uid.is_not(None))).all()
     if not students:
         return {"ok": False, "message": f"找不到組別「{group}」的學員"}
 
