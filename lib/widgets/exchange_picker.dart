@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 
 /// 積分兌換檔位選擇。tier → points：100→100, 250→300, 400→500, 750→1000。
 /// 回傳選定 tier（取消回 null）。
@@ -18,7 +19,7 @@ Future<int?> showExchangePicker(BuildContext context) {
             ListTile(
               title: Text('花 \$${e.key}'),
               trailing: Text('+${e.value} 積分',
-                  style: const TextStyle(fontSize: 18, color: Colors.amberAccent)),
+                  style: const TextStyle(fontSize: 18, color: AppColors.brown)),
               onTap: () => Navigator.pop(ctx, e.key),
             ),
         ],

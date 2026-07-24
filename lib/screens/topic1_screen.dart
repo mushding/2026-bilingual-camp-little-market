@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import '../services/api_client.dart';
 import '../widgets/amount_input_sheet.dart';
 
@@ -107,7 +108,7 @@ class _Topic1ScreenState extends State<Topic1Screen> {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('選關卡（可略過，只是預填金額）', style: TextStyle(color: Colors.white54)),
+          const Text('選關卡（可略過，只是預填金額）', style: TextStyle(color: AppColors.muted)),
           const SizedBox(height: 8),
           Wrap(spacing: 8, runSpacing: 8, children: [
             for (final g in _kGames)

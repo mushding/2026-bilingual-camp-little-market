@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import '../services/api_client.dart';
 import '../services/nfc_service.dart';
 import '../widgets/amount_input_sheet.dart';
@@ -31,7 +32,7 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
   void _snack(String m, bool ok) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(m), backgroundColor: ok ? Colors.green : Colors.red));
+        .showSnackBar(SnackBar(content: Text(m), backgroundColor: ok ? AppColors.teal : AppColors.red));
   }
 
   Future<void> _open() async {
@@ -229,7 +230,7 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
                       '${(r['delta'] as int) >= 0 ? '+' : ''}${r['delta']}　餘 \$${r['balance']}',
                       style: TextStyle(
                           fontSize: 16,
-                          color: (r['delta'] as int) >= 0 ? Colors.greenAccent : Colors.redAccent),
+                          color: (r['delta'] as int) >= 0 ? AppColors.teal : AppColors.red),
                     ),
                   ),
                 ),
@@ -246,7 +247,7 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
 
   Widget _betList({bool cancelable = false}) {
     if (_bets.isEmpty) {
-      return const Center(child: Text('感應學生卡加入桌面', style: TextStyle(color: Colors.white54)));
+      return const Center(child: Text('感應學生卡加入桌面', style: TextStyle(color: AppColors.muted)));
     }
     return ListView(children: [
       for (final b in _bets)
@@ -256,7 +257,7 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
             subtitle: Text('${b['bet_type']} · \$${b['amount']}'),
             trailing: cancelable
                 ? IconButton(
-                    icon: const Icon(Icons.cancel, color: Colors.redAccent),
+                    icon: const Icon(Icons.cancel, color: AppColors.red),
                     onPressed: _busy ? null : () => _cancel(b['uid']))
                 : null,
           ),

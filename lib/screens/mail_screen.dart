@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import '../services/api_client.dart';
 import '../widgets/amount_input_sheet.dart';
 
@@ -32,7 +33,7 @@ class _MailScreenState extends State<MailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$e'), backgroundColor: Colors.red));
+            SnackBar(content: Text('$e'), backgroundColor: AppColors.red));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -54,20 +55,20 @@ class _MailScreenState extends State<MailScreen> {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('✅ ${res.message}',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.teal,
             duration: const Duration(seconds: 3),
           ));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(res.message),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.red,
           ));
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$e'), backgroundColor: Colors.red));
+            SnackBar(content: Text('$e'), backgroundColor: AppColors.red));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -98,7 +99,7 @@ class _MailScreenState extends State<MailScreen> {
             ]),
             const SizedBox(height: 8),
             const Text('紙本卡無 UID，依名字反查（可打部分字）；同名請以小組/座號核對選對人',
-                style: TextStyle(fontSize: 12, color: Colors.white38)),
+                style: TextStyle(fontSize: 12, color: AppColors.muted)),
             const SizedBox(height: 12),
             Expanded(child: _list()),
           ]),
@@ -112,7 +113,7 @@ class _MailScreenState extends State<MailScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_candidates == null) {
-      return const Center(child: Text('輸入名字後搜尋', style: TextStyle(color: Colors.white54)));
+      return const Center(child: Text('輸入名字後搜尋', style: TextStyle(color: AppColors.muted)));
     }
     return ListView.separated(
       itemCount: _candidates!.length,

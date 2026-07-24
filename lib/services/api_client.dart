@@ -163,6 +163,16 @@ class ApiClient {
   static Future<Map<String, dynamic>> adminState() async =>
       await _get('/api/admin/state') as Map<String, dynamic>;
 
+  // ── 預先名單 / 大量綁卡 ────────────────────────────────────────────────
+  static Future<Map<String, dynamic>> rosterList() async =>
+      await _get('/api/admin/roster') as Map<String, dynamic>;
+
+  static Future<Map<String, dynamic>> rosterBind({
+    required int rosterId,
+    required String uid,
+  }) =>
+      _post('/api/admin/roster/bind', {'roster_id': rosterId, 'uid': uid});
+
   static Future<Map<String, dynamic>> adminBind({
     required String uid,
     required String name,

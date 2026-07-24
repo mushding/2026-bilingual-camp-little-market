@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import '../services/api_client.dart';
 import '../services/settings.dart';
 
@@ -59,14 +60,14 @@ class _GuildPendingScreenState extends State<GuildPendingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(res.message),
-          backgroundColor: res.ok ? Colors.green : Colors.red,
+          backgroundColor: res.ok ? AppColors.teal : AppColors.red,
         ));
       }
       await _load();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$e'), backgroundColor: Colors.red));
+            SnackBar(content: Text('$e'), backgroundColor: AppColors.red));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -86,11 +87,11 @@ class _GuildPendingScreenState extends State<GuildPendingScreen> {
 
   Widget _content() {
     if (_err != null) {
-      return Center(child: Text(_err!, style: const TextStyle(color: Colors.red)));
+      return Center(child: Text(_err!, style: const TextStyle(color: AppColors.red)));
     }
     if (_pending == null) return const Center(child: CircularProgressIndicator());
     if (_pending!.isEmpty) {
-      return const Center(child: Text('目前沒有派到本關的學生', style: TextStyle(color: Colors.white54)));
+      return const Center(child: Text('目前沒有派到本關的學生', style: TextStyle(color: AppColors.muted)));
     }
     return ListView.separated(
       itemCount: _pending!.length,
@@ -110,7 +111,7 @@ class _GuildPendingScreenState extends State<GuildPendingScreen> {
           subtitle: Text(
             '剩 ${mm}:${ss.toString().padLeft(2, '0')}',
             style: TextStyle(
-                color: urgent ? Colors.redAccent : Colors.white54,
+                color: urgent ? AppColors.red : AppColors.muted,
                 fontWeight: urgent ? FontWeight.bold : FontWeight.normal),
           ),
           trailing: FilledButton(

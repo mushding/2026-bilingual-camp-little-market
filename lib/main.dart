@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/scan_screen.dart';
 import 'services/settings.dart';
+import 'theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,13 +17,7 @@ class FlyyoungApp extends StatelessWidget {
     return MaterialApp(
       title: '小市集 · 攤主端',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1a4d2e),
-          brightness: Brightness.dark,
-        ),
-      ),
+      theme: buildIslandTheme(),
       home: const ScanScreen(),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import '../models/student_state.dart';
 import '../services/api_client.dart';
 import '../services/nfc_service.dart';
@@ -138,7 +139,7 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
   }
 
   Widget _banner() {
-    final c = _msgOk ? Colors.green : Colors.red;
+    final c = _msgOk ? AppColors.teal : AppColors.red;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -161,9 +162,9 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
         ]);
       case _Step.scanFrom:
         return Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.contactless, size: 96, color: Colors.white24),
+          const Icon(Icons.contactless, size: 96, color: AppColors.sage),
           const SizedBox(height: 16),
-          const Text('步驟 1／2：感應「轉出」學生的卡', style: TextStyle(color: Colors.white54)),
+          const Text('步驟 1／2：感應「轉出」學生的卡', style: TextStyle(color: AppColors.muted)),
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: _scanFrom,
@@ -179,9 +180,9 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
           Text('${_from!.studentName} 轉出 \$$_amount',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          const Icon(Icons.contactless, size: 96, color: Colors.white24),
+          const Icon(Icons.contactless, size: 96, color: AppColors.sage),
           const SizedBox(height: 16),
-          const Text('步驟 2／2：感應「轉入」學生的卡', style: TextStyle(color: Colors.white54)),
+          const Text('步驟 2／2：感應「轉入」學生的卡', style: TextStyle(color: AppColors.muted)),
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: _scanTo,
@@ -194,7 +195,7 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
         ]);
       case _Step.done:
         return Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.check_circle, size: 72, color: Colors.green),
+          const Icon(Icons.check_circle, size: 72, color: AppColors.teal),
           const SizedBox(height: 16),
           FilledButton(onPressed: _reset, child: const Text('再轉一筆')),
         ]);

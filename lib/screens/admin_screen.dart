@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import 'package:flutter/services.dart';
 import '../services/api_client.dart';
 import '../services/nfc_service.dart';
+import 'roster_bind_screen.dart';
 
 /// 總控管理畫面 — 換日 / 結息 / 市場關閉。皆二次確認、不可逆。
 class AdminScreen extends StatefulWidget {
@@ -33,7 +35,7 @@ class _AdminScreenState extends State<AdminScreen> {
   void _snack(String msg, bool ok) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: ok ? Colors.green : Colors.red));
+        SnackBar(content: Text(msg), backgroundColor: ok ? AppColors.teal : AppColors.red));
   }
 
   Future<bool> _confirm(String title, String body) async =>
@@ -45,7 +47,7 @@ class _AdminScreenState extends State<AdminScreen> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.red),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('確定執行'),
             ),
@@ -108,7 +110,7 @@ class _AdminScreenState extends State<AdminScreen> {
         child: ListView(padding: const EdgeInsets.all(16), children: [
           if (st != null)
             Card(
-              color: Colors.indigo.shade900,
+              color: AppColors.sky,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -124,7 +126,7 @@ class _AdminScreenState extends State<AdminScreen> {
           const Text('換日 set_day', style: _h),
           // 換日做啥
           const Text('切換目前天數。影響各攤可用交易與『本攤位』下拉清單，並決定結息屬於哪一場。每場小市集開始前切換。',
-              style: TextStyle(fontSize: 12, color: Colors.grey)),
+              style: TextStyle(fontSize: 12, color: AppColors.muted)),
           Wrap(spacing: 8, children: [
             for (final d in ['D1', 'D2', 'D3'])
               OutlinedButton(
@@ -160,7 +162,7 @@ class _AdminScreenState extends State<AdminScreen> {
           const Divider(height: 32),
           const Text('市場關閉 market_close（D3 突襲，不可逆）', style: _h),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
             onPressed: _busy
                 ? null
                 : () async {
@@ -177,10 +179,10 @@ class _AdminScreenState extends State<AdminScreen> {
           const Divider(height: 32),
           const Text('全重置 reset（測試用，不可復原）', style: _h),
           const Text('學員回起始金、清空所有交易/任務/賭局/見證、天數回 D1、市場重開。保留名單與註冊。',
-              style: TextStyle(fontSize: 12, color: Colors.grey)),
+              style: TextStyle(fontSize: 12, color: AppColors.muted)),
           const SizedBox(height: 8),
           FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: Colors.deepOrange.shade700),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.paper),
             onPressed: _busy
                 ? null
                 : () async {
@@ -196,9 +198,25 @@ class _AdminScreenState extends State<AdminScreen> {
             ),
           ),
           const Divider(height: 32),
+          const Text('大量綁卡（名單 → 逐人感應）', style: _h),
+          const Text('名單先在 Web 後台「🪪 綁卡名單」建好，這裡點人名感應卡片綁定；NFC 不可用改掃 QR。',
+              style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: _busy
+                ? null
+                : () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const RosterBindScreen())),
+            icon: const Icon(Icons.badge),
+            label: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('🪪 大量綁卡', style: TextStyle(fontSize: 16)),
+            ),
+          ),
+          const Divider(height: 32),
           const Text('讀卡 UID（綁卡/建名單用）', style: _h),
           const Text('感應 NTAG → 顯示 UID，可複製。',
-              style: TextStyle(fontSize: 12, color: Colors.grey)),
+              style: TextStyle(fontSize: 12, color: AppColors.muted)),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: _busy || _scanning ? null : _readUid,
@@ -218,4 +236,4 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 }
 
-const _h = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white70);
+const _h = TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.muted);

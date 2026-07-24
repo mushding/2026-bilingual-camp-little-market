@@ -1,7 +1,7 @@
 name: flyyoung_app
 description: 小市集營會 攤主端 — NTAG 掃卡 → backend（Android / iOS）
 publish_to: 'none'
-version: 1.0.1+4
+version: 1.0.1+5
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -16,6 +16,7 @@ dependencies:
   shared_preferences: ^2.2.2  # 非敏感設定持久化
   flutter_secure_storage: ^9.2.2  # API token 存 Keychain/Keystore
   mobile_scanner: ^7.4.0
+  audioplayers: ^6.1.0     # 掃描成功音效
 
 dev_dependencies:
   flutter_test:
@@ -25,6 +26,12 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/sounds/scan_success.mp3
+  fonts:
+    - family: Huninn
+      fonts:
+        - asset: assets/fonts/Huninn-Regular.ttf
 
 flutter_launcher_icons:
   android: true

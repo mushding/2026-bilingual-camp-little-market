@@ -4,53 +4,62 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>小市集 後台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
 <style>
-  :root { --green:#1a4d2e; --purple:#7a4ea0; --bg:#0f1419; --card:#1b2430; --line:#2c3a4a; }
+  /* 理財島設計系統 — https://claude.ai/design/p/a99bc7dc-b807-440b-a88b-c25fc59cc847 */
+  :root { --cream:#F7F2DE; --cardbg:#FFFDF4; --yellow:#E9CD62; --sage:#8FB99F;
+          --mint:#CFE2CF; --teal:#3D7F7C; --teal-dark:#2E5F66; --brown:#7A4A33;
+          --paper:#C08A5A; --red:#A63B32; --sky:#BFE3EA; --ink:#2E4A4E;
+          --muted:#6E7F76; --line:#E5DBBB; }
   * { box-sizing:border-box; }
-  body { margin:0; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
-         background:var(--bg); color:#e6edf3; }
+  body { margin:0; font-family:"Huninn","PingFang TC","Microsoft JhengHei",sans-serif;
+         background:var(--cream); color:var(--ink); }
   header { display:flex; align-items:center; gap:16px; padding:12px 20px;
-           background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+           background:var(--teal-dark); color:#F2F7F2; position:sticky; top:0; z-index:5; }
   header h1 { font-size:18px; margin:0; }
-  .tag { font-size:12px; padding:3px 8px; border-radius:6px; background:#243; color:#9f9; }
-  .tag.closed { background:#522; color:#f99; }
+  .tag { font-size:12px; padding:3px 10px; border-radius:999px; background:var(--mint); color:var(--teal-dark); font-weight:700; }
+  .tag.closed { background:var(--red); color:#F7F2DE; }
   .spacer { flex:1; }
-  button { font:inherit; cursor:pointer; border:none; border-radius:8px; padding:8px 14px;
-           background:#2d3b4d; color:#e6edf3; }
-  button:hover { filter:brightness(1.15); }
+  button { font:inherit; cursor:pointer; border:none; border-radius:999px; padding:8px 16px;
+           background:var(--mint); color:var(--teal-dark); font-weight:700; }
+  button:hover { filter:brightness(0.95); }
   button:disabled { opacity:.4; cursor:not-allowed; }
-  button.primary { background:var(--green); }
-  button.warn { background:#b5460f; }
-  button.danger { background:#a01818; }
+  button.primary { background:var(--teal-dark); color:#F2F7F2; }
+  button.warn { background:var(--paper); color:#FFF6E8; }
+  button.danger { background:var(--red); color:#F7F2DE; }
   nav { display:flex; gap:8px; padding:10px 20px; }
-  nav button.active { background:var(--green); }
+  nav button.active { background:var(--teal-dark); color:#F2F7F2; }
   main { padding:0 20px 40px; }
   .panel { display:none; }
   .panel.show { display:block; }
   .grid { display:flex; gap:12px; flex-wrap:wrap; margin:12px 0; }
-  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px;
-          padding:12px 16px; min-width:130px; }
-  .stat .l { font-size:12px; color:#8aa; } .stat .v { font-size:24px; font-weight:700; }
-  .tblwrap { max-height:calc(100vh - 240px); overflow:auto; border:1px solid var(--line);
-             border-radius:10px; }
-  table { border-collapse:collapse; width:100%; font-size:13px; background:var(--card); }
+  .stat { background:var(--yellow); border:none; border-radius:14px;
+          padding:12px 16px; min-width:130px; color:var(--brown); }
+  .stat .l { font-size:12px; color:var(--brown); opacity:.8; } .stat .v { font-size:24px; font-weight:700; }
+  .tblwrap { max-height:calc(100vh - 240px); overflow:auto; border:2px solid var(--line);
+             border-radius:14px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; background:var(--cardbg); }
   th,td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:right; }
   th:first-child,td:first-child,th.l,td.l { text-align:left; }
-  th { background:#243140; cursor:pointer; user-select:none; position:sticky; top:0; z-index:2; }
-  tr:hover td { background:#222d3a; }
+  th { background:var(--mint); color:var(--teal-dark); cursor:pointer; user-select:none; position:sticky; top:0; z-index:2; }
+  tr:hover td { background:#F3EDD6; }
   .num { font-variant-numeric:tabular-nums; }
-  input,select { font:inherit; padding:8px 10px; border-radius:8px; border:1px solid var(--line);
-                 background:#0d1117; color:#e6edf3; }
+  input,select { font:inherit; padding:8px 10px; border-radius:12px; border:2px solid #D8CBA6;
+                 background:var(--cardbg); color:var(--ink); }
+  input:focus,select:focus { outline:none; border-color:var(--teal); }
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px;
+  .card { background:var(--cardbg); border:2px solid var(--line); border-radius:16px;
           padding:16px; margin:12px 0; }
-  .card h3 { margin:0 0 6px; font-size:15px; }
-  .card p { margin:0 0 10px; font-size:13px; color:#9ab; }
-  .done { color:#6f9; } .err { color:#f88; }
+  .card h3 { margin:0 0 6px; font-size:15px; color:var(--teal-dark); }
+  .card p { margin:0 0 10px; font-size:13px; color:var(--muted); }
+  .done { color:var(--teal); } .err { color:var(--red); }
   #login { max-width:340px; margin:80px auto; text-align:center; }
+  #login h1 { color:var(--teal-dark); }
   #login input { width:100%; margin:12px 0; text-align:center; }
-  .muted { color:#8aa; font-size:12px; }
-  .pill { font-size:11px; padding:1px 6px; border-radius:6px; background:#345; }
+  .muted { color:var(--muted); font-size:12px; }
+  .pill { font-size:11px; padding:1px 8px; border-radius:999px; background:var(--sky); color:var(--teal-dark); font-weight:700; }
 </style>
 </head>
 <body>
@@ -75,6 +84,7 @@
 <nav>
   <button data-tab="dash" class="active" onclick="showTab('dash')">📊 即時總覽</button>
   <button data-tab="admin" onclick="showTab('admin')">⚙️ 總控操作</button>
+  <button data-tab="roster" onclick="showTab('roster')">🪪 綁卡名單</button>
   <button data-tab="report" onclick="showTab('report')">📄 成績單</button>
 </nav>
 <main>
@@ -132,6 +142,34 @@
       </div>
     </div>
     <p class="muted">註：讀卡 UID 需 NFC，僅手機 App 可用，電腦後台不提供。</p>
+  </section>
+
+  <section id="roster" class="panel">
+    <div class="grid" id="rosterStats"></div>
+    <div class="card">
+      <h3>批量新增名單（報名未定案先建人，之後再綁卡）</h3>
+      <p>一行一人：<code>名字,組別,座號,起始金</code>（後三項可留空，起始金預設 2000）。</p>
+      <div class="row" style="align-items:flex-start">
+        <textarea id="rosterLines" rows="5" style="flex:1;min-width:260px;font:inherit;
+          padding:8px 10px;border-radius:12px;border:2px solid #D8CBA6;
+          background:var(--cardbg);color:var(--ink)" placeholder="王小明,A,1&#10;李小華,A,2,5000&#10;陳大文,B"></textarea>
+        <button class="primary" onclick="rosterAdd()">新增</button>
+      </div>
+      <span id="rosterAddMsg" class="muted"></span>
+    </div>
+    <div class="card">
+      <h3>QR 貼紙列印（NFC 備援）</h3>
+      <p>所有「已綁卡」學生一人一張 QR（內容＝卡片 UID）。A4 開啟後 Ctrl/⌘+P 印出，沿虛線裁切貼到卡片角落。</p>
+      <button class="primary" onclick="openReport('/api/admin/qr-cards')">🖨️ 開啟 QR 貼紙頁</button>
+    </div>
+    <div class="row">
+      <input id="rosterFilter" placeholder="搜尋姓名 / 小組…" oninput="renderRoster()">
+      <button onclick="loadRoster()">↻ 重新整理</button>
+    </div>
+    <div class="tblwrap"><table id="rosterTbl"><thead>
+      <tr><th class="l">姓名</th><th class="l">座號</th><th class="l">起始金</th>
+          <th class="l">卡片 UID</th><th>操作</th></tr>
+    </thead><tbody></tbody></table></div>
   </section>
 
   <section id="report" class="panel">
@@ -271,6 +309,77 @@ function renderTable() {
 function showTab(t) {
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('show', p.id === t));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  if (t === 'roster') loadRoster();
+}
+
+// ── 綁卡名單 ──
+let roster = null;
+
+async function loadRoster() {
+  try { roster = await api('/api/admin/roster'); renderRoster(); }
+  catch (e) { toast(e.message, true); }
+}
+
+function renderRoster() {
+  if (!roster) return;
+  $('#rosterStats').innerHTML = [
+    ['名單人數', roster.total], ['✅ 已綁卡', roster.bound], ['❌ 未綁卡', roster.unbound],
+  ].map(([l, v]) => `<div class="stat"><div class="l">${l}</div><div class="v num">${v}</div></div>`).join('');
+  const f = ($('#rosterFilter').value || '').trim().toLowerCase();
+  const rows = roster.entries.filter(r =>
+    !f || r.name.toLowerCase().includes(f) || (r.group || '').toLowerCase().includes(f));
+  // 依組別分段：組別列 + 該組成員列
+  let html = '', curGroup = null;
+  for (const r of rows) {
+    const g = r.group || '（未分組）';
+    if (g !== curGroup) {
+      curGroup = g;
+      const gRows = rows.filter(x => (x.group || '（未分組）') === g);
+      const gBound = gRows.filter(x => x.bound).length;
+      html += `<tr><td class="l" colspan="5" style="background:var(--mint);color:var(--teal-dark);font-weight:700">
+        ${g}　<span class="muted">${gBound} / ${gRows.length} 已綁卡</span></td></tr>`;
+    }
+    html += `<tr>
+      <td class="l">${r.bound ? '✅' : '❌'} ${r.name}</td>
+      <td class="l">${r.seat_no || ''}</td>
+      <td class="l num">${r.seed_amount}</td>
+      <td class="l" style="font-family:monospace">${r.uid || '<span class="err">未綁定</span>'}</td>
+      <td>${r.bound
+        ? `<button onclick="rosterUnbind(${r.id},'${r.name}')">解綁</button>`
+        : `<button class="danger" onclick="rosterDel(${r.id},'${r.name}')">刪除</button>`}</td>
+    </tr>`;
+  }
+  $('#rosterTbl tbody').innerHTML = html;
+}
+
+async function rosterAdd() {
+  const lines = $('#rosterLines').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return;
+  const entries = lines.map(l => {
+    const [name, group, seat_no, seed] = l.split(/[,，]/).map(x => (x || '').trim());
+    return { name, group: group || null, seat_no: seat_no || null,
+             seed_amount: seed ? parseInt(seed, 10) : 2000 };
+  });
+  try {
+    const r = await api('/api/admin/roster', post({ entries }));
+    $('#rosterAddMsg').textContent = `已新增 ${r.added} 人`;
+    $('#rosterLines').value = '';
+    await loadRoster();
+  } catch (e) { $('#rosterAddMsg').textContent = e.message; }
+}
+
+async function rosterUnbind(id, name) {
+  if (!confirm(`解綁 ${name} 的卡片？（會刪除該學生帳戶；已有交易則不可解綁）`)) return;
+  try { const r = await api('/api/admin/roster/unbind', post({ roster_id: id }));
+        toast(r.ok ? `已解綁 ${name}` : r.message, !r.ok); await loadRoster(); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function rosterDel(id, name) {
+  if (!confirm(`從名單刪除 ${name}？`)) return;
+  try { const r = await api('/api/admin/roster/' + id, { method: 'DELETE' });
+        toast(r.ok ? `已刪除 ${name}` : r.message, !r.ok); await loadRoster(); }
+  catch (e) { toast(e.message, true); }
 }
 
 // ── 總控操作 ──
@@ -344,8 +453,8 @@ function toast(msg, err) {
   const d = document.createElement('div');
   d.textContent = msg;
   d.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-    background:${err ? '#a01818' : '#1a4d2e'};color:#fff;padding:10px 18px;border-radius:8px;
-    z-index:99;box-shadow:0 4px 16px rgba(0,0,0,.4)`;
+    background:${err ? '#A63B32' : '#2E5F66'};color:#F7F2DE;padding:10px 18px;border-radius:999px;
+    z-index:99;box-shadow:0 4px 16px rgba(46,74,78,.3)`;
   document.body.appendChild(d);
   setTimeout(() => d.remove(), 2600);
 }

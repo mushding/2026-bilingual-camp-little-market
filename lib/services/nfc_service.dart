@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 
+import 'sound_service.dart';
+
 /// NTAG / Type-2 tag 讀取。PoC 只取 UID，不寫卡。
 class NfcService {
   /// 啟動一次 polling — 等學員把卡靠近，回傳 UID（hex string, uppercase, 冒號分隔）。
@@ -22,6 +24,7 @@ class NfcService {
         try {
           final uid = _extractUid(tag);
           await NfcManager.instance.stopSession();
+          unawaited(SoundService.playScanSuccess());
           if (!completer.isCompleted) completer.complete(uid);
         } catch (e) {
           await NfcManager.instance.stopSession(errorMessage: e.toString());

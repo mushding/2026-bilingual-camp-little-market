@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+
+import '../services/sound_service.dart';
 
 /// QR code 備援掃描（NFC 手機不足時）。卡片貼紙的 QR 內容＝該卡 UID（跟 NFC 讀到的字串一致）。
 /// 掃到第一個結果就回傳並關閉頁面；使用者可按 X 取消回傳 null。
@@ -25,6 +28,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
     final value = capture.barcodes.first.rawValue;
     if (value == null || value.isEmpty) return;
     _handled = true;
+    SoundService.playScanSuccess();
     Navigator.pop(context, value);
   }
 
@@ -35,7 +39,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
       body: Stack(fit: StackFit.expand, children: [
         MobileScanner(controller: _controller, onDetect: _onDetect),
         const Center(
-          child: Icon(Icons.qr_code_scanner, size: 96, color: Colors.white24),
+          child: Icon(Icons.qr_code_scanner, size: 96, color: AppColors.sage),
         ),
         Positioned(
           bottom: 32,

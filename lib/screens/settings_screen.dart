@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import '../data/stalls.dart';
 import '../services/api_client.dart';
 import '../services/settings.dart';
@@ -43,7 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _snack(String m, bool ok) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(m), backgroundColor: ok ? Colors.green : Colors.red));
+        .showSnackBar(SnackBar(content: Text(m), backgroundColor: ok ? AppColors.teal : AppColors.red));
   }
 
   Future<void> _enroll() async {
@@ -84,7 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // ── 裝置註冊 ──
             Card(
-              color: s.enrolled ? Colors.green.shade900 : Colors.orange.shade900,
+              color: s.enrolled ? AppColors.mint : AppColors.yellow,
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -150,4 +151,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-const _lbl = TextStyle(letterSpacing: 2, color: Colors.white54, fontSize: 13);
+const _lbl = TextStyle(letterSpacing: 2, color: AppColors.muted, fontSize: 13);

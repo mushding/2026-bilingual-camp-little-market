@@ -16,7 +16,7 @@ WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 import auth
 import schemas
 from db import SessionLocal, init_db
-from services import bank, casino, guild, report, topic1
+from services import bank, casino, guild, report, roster, topic1
 from services.txn import handle_scan
 
 
@@ -234,6 +234,44 @@ def admin_bind(req: schemas.BindReq):
                       balance=req.seed_amount, group=req.group, seat_no=req.seat_no,
                       created_at=datetime.now(timezone.utc).isoformat(timespec="seconds")))
         return {"ok": True, "uid": req.uid, "name": req.name, "seed_amount": req.seed_amount}
+
+
+# ── 預先名單 / 大量綁卡 ─────────────────────────────────────────────────
+@app.get("/api/admin/roster")
+def roster_list():
+    with SessionLocal() as s:
+        return roster.list_all(s)
+
+
+@app.post("/api/admin/roster")
+def roster_add(req: schemas.RosterAddReq):
+    with SessionLocal.begin() as s:
+        return roster.add(s, req.entries)
+
+
+@app.post("/api/admin/roster/bind")
+def roster_bind(req: schemas.RosterBindReq):
+    with SessionLocal.begin() as s:
+        return roster.bind(s, req.roster_id, req.uid)
+
+
+@app.post("/api/admin/roster/unbind")
+def roster_unbind(req: schemas.RosterUnbindReq):
+    with SessionLocal.begin() as s:
+        return roster.unbind(s, req.roster_id)
+
+
+@app.delete("/api/admin/roster/{roster_id}")
+def roster_delete(roster_id: int):
+    with SessionLocal.begin() as s:
+        return roster.delete(s, roster_id)
+
+
+@app.get("/api/admin/qr-cards", response_class=HTMLResponse)
+def roster_qr_cards():
+    """已綁卡學生的 QR 貼紙列印頁（A4）。瀏覽器 Ctrl+P → 存 PDF / 印出裁切。"""
+    with SessionLocal() as s:
+        return roster.qr_sheet(s)
 
 
 @app.post("/api/admin/import")

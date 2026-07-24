@@ -53,6 +53,26 @@ class BindReq(BaseModel):
     seat_no: str | None = None
 
 
+class RosterEntry(BaseModel):
+    name: str
+    group: str | None = None
+    seat_no: str | None = None
+    seed_amount: int = 2000
+
+
+class RosterAddReq(BaseModel):
+    entries: list[RosterEntry]
+
+
+class RosterBindReq(BaseModel):
+    roster_id: int
+    uid: str
+
+
+class RosterUnbindReq(BaseModel):
+    roster_id: int
+
+
 class GuildCompleteReq(BaseModel):
     student_uid: str
     stall_id: str

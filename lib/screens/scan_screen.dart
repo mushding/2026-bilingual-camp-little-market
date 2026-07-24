@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import '../data/stalls.dart';
 import '../models/student_state.dart';
 import '../models/txn_type.dart';
@@ -63,7 +64,7 @@ class _ScanScreenState extends State<ScanScreen> {
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            backgroundColor: Colors.red.shade900,
+            backgroundColor: AppColors.red,
             title: const Text('🔔 市場已關閉'),
             content: const Text('小市集結束，請學員停止交易，回到禮堂集合。',
                 style: TextStyle(fontSize: 18)),
@@ -385,19 +386,20 @@ class _ScanScreenState extends State<ScanScreen> {
   Widget _stallBadge() => Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.red.shade900,
+          color: AppColors.yellow,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Row(children: [
-          const Icon(Icons.storefront, size: 18),
+          const Icon(Icons.storefront, size: 18, color: AppColors.brown),
           const SizedBox(width: 8),
           Text('本攤位：${_stall.label}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.brown)),
         ]),
       );
 
   Widget _bannerWidget() {
-    final c = _bannerOk ? Colors.green : Colors.red;
+    final c = _bannerOk ? AppColors.teal : AppColors.red;
     final title = _bannerName.isEmpty
         ? null
         : '$_bannerName${_bannerGroup.isEmpty ? '' : '　[$_bannerGroup]'}';
@@ -457,9 +459,9 @@ class _ScanScreenState extends State<ScanScreen> {
                     Text('請靠近卡片…'),
                   ])
                 : const Column(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.contactless, size: 96, color: Colors.white24),
+                    Icon(Icons.contactless, size: 96, color: AppColors.sage),
                     SizedBox(height: 16),
-                    Text('按「掃卡」並把卡片靠近手機背面', style: TextStyle(color: Colors.white54)),
+                    Text('按「掃卡」並把卡片靠近手機背面', style: TextStyle(color: AppColors.muted)),
                   ]),
           ),
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import '../models/student_state.dart';
 
 /// 顯示學生：中文名 / 現金 / 積分 / 天國點數 / 定存本利。
@@ -24,7 +25,7 @@ class StudentCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.blueGrey.shade700,
+                    color: AppColors.mint,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(s.group, style: const TextStyle(fontSize: 14)),
@@ -32,17 +33,17 @@ class StudentCard extends StatelessWidget {
               ],
             ]),
             const SizedBox(height: 4),
-            Text(s.uid, style: const TextStyle(fontFamily: 'monospace', color: Colors.white38, fontSize: 12)),
+            Text(s.uid, style: const TextStyle(fontFamily: 'monospace', color: AppColors.muted, fontSize: 12)),
             const Divider(height: 20),
             Wrap(spacing: 18, runSpacing: 8, children: [
-              _stat('現金', '\$${s.balance}', Colors.greenAccent),
-              _stat('積分', '${s.points}', Colors.amberAccent),
-              _stat('天國點數', '${s.kingdomPoints}', const Color(0xFFc9a0ff)),
-              _stat('定存本利', '\$${s.depositBalance}', Colors.lightBlueAccent),
+              _stat('現金', '\$${s.balance}', AppColors.teal),
+              _stat('積分', '${s.points}', AppColors.brown),
+              _stat('天國點數', '${s.kingdomPoints}', AppColors.paper),
+              _stat('定存本利', '\$${s.depositBalance}', AppColors.tealDark),
             ]),
             if (s.pendingTasks.isNotEmpty) ...[
               const Divider(height: 20),
-              const Text('公會待完成任務', style: TextStyle(fontSize: 11, color: Colors.white54)),
+              const Text('公會待完成任務', style: TextStyle(fontSize: 11, color: AppColors.muted)),
               const SizedBox(height: 4),
               ...s.pendingTasks.map(_taskRow),
             ],
@@ -58,12 +59,12 @@ class StudentCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(children: [
-        const Icon(Icons.assignment, size: 16, color: Colors.orangeAccent),
+        const Icon(Icons.assignment, size: 16, color: AppColors.paper),
         const SizedBox(width: 6),
         Expanded(child: Text('${t.gameName}（獎勵 ${t.reward}）')),
         Text('剩 ${mm}:${ss.toString().padLeft(2, '0')}',
             style: TextStyle(
-                color: urgent ? Colors.redAccent : Colors.white70,
+                color: urgent ? AppColors.red : AppColors.muted,
                 fontWeight: urgent ? FontWeight.bold : FontWeight.normal)),
       ]),
     );
@@ -73,7 +74,7 @@ class StudentCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.white54)),
+          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
           Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: c)),
         ],
       );
