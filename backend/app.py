@@ -236,6 +236,23 @@ def admin_bind(req: schemas.BindReq):
         return {"ok": True, "uid": req.uid, "name": req.name, "seed_amount": req.seed_amount}
 
 
+@app.delete("/api/admin/student/{uid}")
+def admin_delete_student(uid: str):
+    """直接刪除一筆 Student（測試/假帳號清理用）。有交易紀錄則拒絕，避免誤刪正式資料。"""
+    from sqlalchemy import select
+    from models import Student, Transaction
+    with SessionLocal.begin() as s:
+        stu = s.get(Student, uid)
+        if stu is None:
+            return {"ok": False, "message": "查無此 UID"}
+        txn = s.scalars(select(Transaction).where(Transaction.uid == uid).limit(1)).first()
+        if txn:
+            return {"ok": False, "message": f"{stu.name} 已有交易紀錄，不可直接刪除"}
+        name = stu.name
+        s.delete(stu)
+        return {"ok": True, "uid": uid, "name": name}
+
+
 # ── 預先名單 / 大量綁卡 ─────────────────────────────────────────────────
 @app.get("/api/admin/roster")
 def roster_list():
