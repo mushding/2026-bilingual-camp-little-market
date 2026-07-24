@@ -248,7 +248,9 @@ class _ScanScreenState extends State<ScanScreen> {
         cost: cost,
         reward: reward,
         tier: tier == 0 ? null : tier,
-        staffUid: t == TxnType.witness ? Settings.instance.deviceId : null,
+        staffUid: (t == TxnType.witness || t == TxnType.guildComplete)
+            ? Settings.instance.deviceId
+            : null,
       );
       setState(() {
         _student = res;
@@ -436,10 +438,6 @@ class _ScanScreenState extends State<ScanScreen> {
           Navigator.push(context, MaterialPageRoute(
               builder: (_) => CasinoTableScreen(table: _stall.id == 'casino_21' ? '21' : 'dice', stallId: _stall.id)));
         });
-    if (_isGameStall) return _entryButton('看待完成名單', Icons.list_alt, () {
-          Navigator.push(context, MaterialPageRoute(
-              builder: (_) => GuildPendingScreen(stallId: _stall.id, stallLabel: _stall.label)));
-        });
     if (_isMail) return _entryButton('郵政感謝卡登記', Icons.mail, () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const MailScreen()));
         });
@@ -473,6 +471,18 @@ class _ScanScreenState extends State<ScanScreen> {
             label: const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
               child: Text('服務三：轉帳', style: TextStyle(fontSize: 16)),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (_isGameStall && _state == _S.idle) ...[
+          FilledButton.icon(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => GuildPendingScreen(stallId: _stall.id, stallLabel: _stall.label))),
+            icon: const Icon(Icons.list_alt, size: 28),
+            label: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: Text('看待完成名單', style: TextStyle(fontSize: 20)),
             ),
           ),
           const SizedBox(height: 8),
