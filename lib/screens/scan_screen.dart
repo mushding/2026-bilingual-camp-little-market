@@ -225,8 +225,8 @@ class _ScanScreenState extends State<ScanScreen> {
         break;
       case TxnType.guildDraw:
         final v = await showAmountInput(context,
-            title: '公會：抽幾個任務？', quickKeys: const [1, 2, 3], min: 1, max: 9,
-            hint: '免手續費，不重複任務，逾時 8 分扣 100');
+            title: '公會：抽幾個任務？', quickKeys: const [1, 2, 3, 4, 5], min: 1, max: 9,
+            hint: '問學員要抽幾個');
         if (v == null) return;
         amount = v;
         break;

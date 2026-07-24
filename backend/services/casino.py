@@ -24,8 +24,11 @@ def _table_bets(session, round_id: int) -> list[dict]:
         CasinoBet.round_id == round_id, CasinoBet.status == "placed")).all()
     out = []
     for b in rows:
-        st = session.get(Student, b.uid)
-        out.append({"uid": b.uid, "name": st.name if st else "?",
+        # b.uid 是掃卡當下的原始值，可能是 PK uid 也可能是 card_uid，兩者都要能查到
+        # （同 lock_student 的邏輯，否則已綁卡學生會查無此人顯示「?」）。
+        st = session.scalars(select(Student).where(
+            (Student.uid == b.uid) | (Student.card_uid == b.uid))).first()
+        out.append({"uid": b.uid, "name": st.name if st else "?", "group": (st.group if st else "") or "",
                     "bet_type": b.bet_type, "amount": b.amount})
     return out
 
@@ -120,7 +123,7 @@ def settle(session, round_id: int, dice=None, results=None) -> dict:
             write_txn(session, s, r.stall_id, "casino_payout", delta, day,
                       {"round_id": round_id, "bet": b.bet_type, "win": b.status == "won",
                        "dice": dice, "net": delta})
-            out.append({"uid": s.uid, "name": s.name, "bet": b.bet_type,
+            out.append({"uid": s.uid, "name": s.name, "group": s.group or "", "bet": b.bet_type,
                         "delta": delta, "balance": s.balance})
 
     else:  # '21' — 關主手動標 win/lose
@@ -139,7 +142,7 @@ def settle(session, round_id: int, dice=None, results=None) -> dict:
                 delta = -b.amount
             write_txn(session, s, r.stall_id, "casino_payout", delta, day,
                       {"round_id": round_id, "bet": "21:play", "win": win, "net": delta})
-            out.append({"uid": s.uid, "name": s.name, "bet": "21:play",
+            out.append({"uid": s.uid, "name": s.name, "group": s.group or "", "bet": "21:play",
                         "delta": delta, "balance": s.balance})
 
     r.status = "settled"

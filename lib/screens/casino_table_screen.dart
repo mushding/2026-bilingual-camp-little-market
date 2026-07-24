@@ -20,7 +20,7 @@ enum _Phase { idle, collect, resolve, result }
 class _CasinoTableScreenState extends State<CasinoTableScreen> {
   _Phase _phase = _Phase.idle;
   int? _roundId;
-  List<Map<String, dynamic>> _bets = []; // {uid,name,bet_type,amount}
+  List<Map<String, dynamic>> _bets = []; // {uid,name,group,bet_type,amount}
   List<Map<String, dynamic>> _results = [];
   int _d1 = 1, _d2 = 1;
   final Map<String, bool> _wins = {}; // 21: uid -> win
@@ -28,6 +28,12 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
   bool _scanning = false;  // NFC session 開著（讓按鈕顯示「感應中…」）
 
   bool get _isDice => widget.table == 'dice';
+
+  String _nameGroup(Map<String, dynamic> m) {
+    final name = m['name'] ?? '?';
+    final group = m['group'];
+    return (group != null && group != '') ? '$name（$group）' : name;
+  }
 
   void _snack(String m, bool ok) {
     if (!mounted) return;
@@ -224,7 +230,7 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
               for (final r in _results)
                 Card(
                   child: ListTile(
-                    title: Text(r['name'] ?? '?'),
+                    title: Text(_nameGroup(r)),
                     subtitle: Text('注：${r['bet']}'),
                     trailing: Text(
                       '${(r['delta'] as int) >= 0 ? '+' : ''}${r['delta']}　餘 \$${r['balance']}',
@@ -253,7 +259,7 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
       for (final b in _bets)
         Card(
           child: ListTile(
-            title: Text(b['name'] ?? '?'),
+            title: Text(_nameGroup(b)),
             subtitle: Text('${b['bet_type']} · \$${b['amount']}'),
             trailing: cancelable
                 ? IconButton(
@@ -300,7 +306,7 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
           child: ListView(children: [
             for (final b in _bets)
               SwitchListTile(
-                title: Text(b['name'] ?? '?'),
+                title: Text(_nameGroup(b)),
                 subtitle: Text('\$${b['amount']}　${(_wins[b['uid']] ?? false) ? "贏" : "輸"}'),
                 value: _wins[b['uid']] ?? false,
                 onChanged: (v) => setState(() => _wins[b['uid']] = v),

@@ -285,7 +285,8 @@ const COLS = [
   ['seed', '起始金', false], ['balance', '現金', false], ['deposit', '定存', false],
   ['asset', '總資產', false], ['points', '積分', false],
   ['kingdom_points', '天國', false], ['card_count', '卡', false],
-  ['pending_tasks', '進行中', false],
+  ['guild_task_count', '公會任務數', false],
+  ['guild_task_remaining', '各別剩餘時間', true],
 ];
 
 function setSort(k) { if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } renderTable(); }
@@ -303,9 +304,11 @@ function renderTable() {
   const arrow = k => sortKey === k ? (sortDir > 0 ? ' ▲' : ' ▼') : '';
   $('#tbl thead').innerHTML = '<tr>' + COLS.map(([k, l, isL]) =>
     `<th class="${isL ? 'l' : ''}" onclick="setSort('${k}')">${l}${arrow(k)}</th>`).join('') + '</tr>';
+  const fmtMMSS = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   $('#tbl tbody').innerHTML = rows.map(r => '<tr>' + COLS.map(([k, , isL]) => {
     let v = r[k] == null ? '' : escapeHtml(r[k]);
-    if (k === 'pending_tasks' && r[k] > 0) v = `<span class="pill">${escapeHtml(r[k])}</span>`;
+    if (k === 'guild_task_count' && r[k] > 0) v = `<span class="pill">${escapeHtml(r[k])}</span>`;
+    if (k === 'guild_task_remaining') v = (r[k] || []).map(fmtMMSS).join('、');
     return `<td class="${isL ? 'l' : 'num'}">${v}</td>`;
   }).join('') + '</tr>').join('');
 }
