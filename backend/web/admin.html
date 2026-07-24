@@ -165,6 +165,11 @@ let pollTimer = null;
 
 const $ = s => document.querySelector(s);
 
+// 學生姓名/小組/座號來自報名資料（admin_bind 或 CSV 匯入），非可信輸入——
+// 進 innerHTML 前一律跳脫，避免惡意姓名（如 <img onerror=...>）偷走這台裝置的 admin token。
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 async function api(path, opts = {}) {
   const res = await fetch(path, {
     ...opts,
@@ -261,8 +266,8 @@ function renderTable() {
   $('#tbl thead').innerHTML = '<tr>' + COLS.map(([k, l, isL]) =>
     `<th class="${isL ? 'l' : ''}" onclick="setSort('${k}')">${l}${arrow(k)}</th>`).join('') + '</tr>';
   $('#tbl tbody').innerHTML = rows.map(r => '<tr>' + COLS.map(([k, , isL]) => {
-    let v = r[k] == null ? '' : r[k];
-    if (k === 'pending_tasks' && r[k] > 0) v = `<span class="pill">${r[k]}</span>`;
+    let v = r[k] == null ? '' : escapeHtml(r[k]);
+    if (k === 'pending_tasks' && r[k] > 0) v = `<span class="pill">${escapeHtml(r[k])}</span>`;
     return `<td class="${isL ? 'l' : 'num'}">${v}</td>`;
   }).join('') + '</tr>').join('');
 }
@@ -324,7 +329,7 @@ function renderReportPick() {
   const sel = $('#reportPick'); if (!data) return;
   const cur = sel.value;
   sel.innerHTML = data.students.map(r =>
-    `<option value="${r.uid}">${r.name}${r.group ? ' (' + r.group + ')' : ''}</option>`).join('');
+    `<option value="${escapeHtml(r.uid)}">${escapeHtml(r.name)}${r.group ? ' (' + escapeHtml(r.group) + ')' : ''}</option>`).join('');
   if (cur) sel.value = cur;
 }
 // 成績單 / 批次列印走 admin 權限，需帶 token → fetch 後用 blob 開新分頁。
