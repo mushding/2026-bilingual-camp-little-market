@@ -73,6 +73,11 @@ class RosterUnbindReq(BaseModel):
     roster_id: int
 
 
+class RosterSetGroupReq(BaseModel):
+    roster_id: int
+    group: str | None = None
+
+
 class GuildCompleteReq(BaseModel):
     student_uid: str
     stall_id: str

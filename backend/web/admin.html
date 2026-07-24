@@ -167,7 +167,7 @@
       <button onclick="loadRoster()">↻ 重新整理</button>
     </div>
     <div class="tblwrap"><table id="rosterTbl"><thead>
-      <tr><th class="l">姓名</th><th class="l">座號</th><th class="l">起始金</th>
+      <tr><th class="l">姓名</th><th class="l">組別</th><th class="l">座號</th><th class="l">起始金</th>
           <th class="l">卡片 UID</th><th>操作</th></tr>
     </thead><tbody></tbody></table></div>
   </section>
@@ -328,6 +328,13 @@ function renderRoster() {
   const f = ($('#rosterFilter').value || '').trim().toLowerCase();
   const rows = roster.entries.filter(r =>
     !f || r.name.toLowerCase().includes(f) || (r.group || '').toLowerCase().includes(f));
+  // 既有組別（供下拉選單），依字母排序
+  const knownGroups = [...new Set(roster.entries.map(r => r.group).filter(Boolean))].sort();
+  const NEW_GROUP = '__new__';
+  const groupOptions = g => ['', ...knownGroups].map(o =>
+    `<option value="${o}" ${o === (g || '') ? 'selected' : ''}>${o || '（未分組）'}</option>`
+  ).join('') + `<option value="${NEW_GROUP}">＋ 新組別…</option>`;
+
   // 依組別分段：組別列 + 該組成員列
   let html = '', curGroup = null;
   for (const r of rows) {
@@ -336,11 +343,12 @@ function renderRoster() {
       curGroup = g;
       const gRows = rows.filter(x => (x.group || '（未分組）') === g);
       const gBound = gRows.filter(x => x.bound).length;
-      html += `<tr><td class="l" colspan="5" style="background:var(--mint);color:var(--teal-dark);font-weight:700">
+      html += `<tr><td class="l" colspan="6" style="background:var(--mint);color:var(--teal-dark);font-weight:700">
         ${g}　<span class="muted">${gBound} / ${gRows.length} 已綁卡</span></td></tr>`;
     }
     html += `<tr>
       <td class="l">${r.bound ? '✅' : '❌'} ${r.name}</td>
+      <td class="l"><select onchange="rosterSetGroup(${r.id}, this)">${groupOptions(r.group)}</select></td>
       <td class="l">${r.seat_no || ''}</td>
       <td class="l num">${r.seed_amount}</td>
       <td class="l" style="font-family:monospace">${r.uid || '<span class="err">未綁定</span>'}</td>
@@ -350,6 +358,18 @@ function renderRoster() {
     </tr>`;
   }
   $('#rosterTbl tbody').innerHTML = html;
+}
+
+async function rosterSetGroup(id, sel) {
+  let group = sel.value;
+  if (group === '__new__') {
+    group = (prompt('新組別名稱：') || '').trim();
+    if (!group) { renderRoster(); return; }
+  }
+  try {
+    await api('/api/admin/roster/set_group', post({ roster_id: id, group }));
+    await loadRoster();
+  } catch (e) { toast(e.message, true); }
 }
 
 async function rosterAdd() {

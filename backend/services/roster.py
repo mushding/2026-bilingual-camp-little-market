@@ -55,6 +55,20 @@ def bind(s, roster_id: int, uid: str) -> dict:
     return {"ok": True, "roster_id": r.id, "name": r.name, "uid": uid}
 
 
+def set_group(s, roster_id: int, group: str | None) -> dict:
+    """改組別（未分組/分組皆可）。已綁卡的話一併同步 Student.group。"""
+    r = s.get(Roster, roster_id)
+    if r is None:
+        return {"ok": False, "message": "查無此名單項目"}
+    g = (group or "").strip() or None
+    r.group = g
+    if r.uid:
+        stu = s.get(Student, r.uid)
+        if stu:
+            stu.group = g
+    return {"ok": True, "roster_id": r.id, "name": r.name, "group": g or ""}
+
+
 def unbind(s, roster_id: int) -> dict:
     """解綁（營會前修正用）：清 roster.uid、刪 Student。已有交易紀錄則拒絕。"""
     r = s.get(Roster, roster_id)

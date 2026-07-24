@@ -261,6 +261,12 @@ def roster_unbind(req: schemas.RosterUnbindReq):
         return roster.unbind(s, req.roster_id)
 
 
+@app.post("/api/admin/roster/set_group")
+def roster_set_group(req: schemas.RosterSetGroupReq):
+    with SessionLocal.begin() as s:
+        return roster.set_group(s, req.roster_id, req.group)
+
+
 @app.delete("/api/admin/roster/{roster_id}")
 def roster_delete(roster_id: int):
     with SessionLocal.begin() as s:

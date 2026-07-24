@@ -64,6 +64,12 @@ def test_roster_flow():
         handle_scan(s, ScanReq(uid=UID, stall_id="grocery", action="debit", amount=10))
         assert not roster.unbind(s, rid)["ok"]  # 已有交易 → 拒絕
 
+    # 改組別：同步已綁卡的 Student.group
+    with S.begin() as s:
+        rid = next(e["id"] for e in roster.list_all(s)["entries"] if e["name"] == "李小華")
+        assert roster.set_group(s, rid, "C")["ok"]
+        assert s.get(models.Student, UID).group == "C"
+
     # 刪除：已綁不可刪、未綁可刪
     with S.begin() as s:
         entries = roster.list_all(s)["entries"]
