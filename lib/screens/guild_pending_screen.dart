@@ -8,7 +8,8 @@ import 'qr_scan_screen.dart';
 
 enum _View { scan, list }
 
-/// 小遊戲攤：預設「掃卡看狀態」給學員自助查詢；關主可切到「待完成名單」逐一標記完成。
+/// 小遊戲攤：預設「待完成名單」給關主逐一標記完成；「掃卡看狀態」為次要功能，
+/// 讓學員可自助感應卡片查詢，從名單畫面右上角切換。
 class GuildPendingScreen extends StatefulWidget {
   final String stallId;
   final String stallLabel;
@@ -19,7 +20,7 @@ class GuildPendingScreen extends StatefulWidget {
 }
 
 class _GuildPendingScreenState extends State<GuildPendingScreen> {
-  _View _view = _View.scan;
+  _View _view = _View.list;
   bool _scanning = false;
   bool _busy = false;
   StudentState? _result;
@@ -27,6 +28,12 @@ class _GuildPendingScreenState extends State<GuildPendingScreen> {
 
   List<Map<String, dynamic>>? _pending;
   String? _listErr;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadList();
+  }
 
   // ── 掃卡看狀態 ──
   Future<void> _scanNfc() async {
