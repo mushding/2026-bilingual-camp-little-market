@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import inspect, text
 
-from db import SessionLocal, engine, init_db
+from db import SessionLocal, init_db, write_engine
 
 
 def _now() -> str:
@@ -17,10 +17,10 @@ def _now() -> str:
 
 def main():
     init_db()  # 確保 students 表存在（沿用既有 schema，不會建 roster）
-    insp = inspect(engine)
+    insp = inspect(write_engine)
     student_cols = {c["name"] for c in insp.get_columns("students")}
 
-    with engine.begin() as conn:
+    with write_engine.begin() as conn:
         if "card_uid" not in student_cols:
             conn.execute(text("ALTER TABLE students ADD COLUMN card_uid TEXT"))
             conn.execute(text(
@@ -42,7 +42,7 @@ def main():
                     "group": group, "seat_no": seat_no, "now": _now()})
             print(f"migrated {len(rows)} unbound roster entries into students")
 
-        with engine.begin() as conn:
+        with write_engine.begin() as conn:
             conn.execute(text("DROP TABLE roster"))
             print("dropped roster table")
     else:

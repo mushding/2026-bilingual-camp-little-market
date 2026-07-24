@@ -203,6 +203,11 @@ let pollTimer = null;
 
 const $ = s => document.querySelector(s);
 
+// 學生姓名/小組/座號/UID 來自報名資料或 QR 掃描（admin_bind、CSV 匯入、QR 備援掃描皆非可信輸入）——
+// 進 innerHTML 前一律跳脫，避免惡意內容（如 <img onerror=...>）偷走這台裝置的 admin token。
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 async function api(path, opts = {}) {
   const res = await fetch(path, {
     ...opts,
@@ -299,8 +304,8 @@ function renderTable() {
   $('#tbl thead').innerHTML = '<tr>' + COLS.map(([k, l, isL]) =>
     `<th class="${isL ? 'l' : ''}" onclick="setSort('${k}')">${l}${arrow(k)}</th>`).join('') + '</tr>';
   $('#tbl tbody').innerHTML = rows.map(r => '<tr>' + COLS.map(([k, , isL]) => {
-    let v = r[k] == null ? '' : r[k];
-    if (k === 'pending_tasks' && r[k] > 0) v = `<span class="pill">${r[k]}</span>`;
+    let v = r[k] == null ? '' : escapeHtml(r[k]);
+    if (k === 'pending_tasks' && r[k] > 0) v = `<span class="pill">${escapeHtml(r[k])}</span>`;
     return `<td class="${isL ? 'l' : 'num'}">${v}</td>`;
   }).join('') + '</tr>').join('');
 }
@@ -332,7 +337,7 @@ function renderRoster() {
   const knownGroups = [...new Set(roster.entries.map(r => r.group).filter(Boolean))].sort();
   const NEW_GROUP = '__new__';
   const groupOptions = g => ['', ...knownGroups].map(o =>
-    `<option value="${o}" ${o === (g || '') ? 'selected' : ''}>${o || '（未分組）'}</option>`
+    `<option value="${escapeHtml(o)}" ${o === (g || '') ? 'selected' : ''}>${o ? escapeHtml(o) : '（未分組）'}</option>`
   ).join('') + `<option value="${NEW_GROUP}">＋ 新組別…</option>`;
 
   // 依組別分段：組別列 + 該組成員列
@@ -344,17 +349,17 @@ function renderRoster() {
       const gRows = rows.filter(x => (x.group || '（未分組）') === g);
       const gBound = gRows.filter(x => x.bound).length;
       html += `<tr><td class="l" colspan="6" style="background:var(--mint);color:var(--teal-dark);font-weight:700">
-        ${g}　<span class="muted">${gBound} / ${gRows.length} 已綁卡</span></td></tr>`;
+        ${escapeHtml(g)}　<span class="muted">${gBound} / ${gRows.length} 已綁卡</span></td></tr>`;
     }
     html += `<tr>
-      <td class="l">${r.bound ? '✅' : '❌'} ${r.name}</td>
+      <td class="l">${r.bound ? '✅' : '❌'} ${escapeHtml(r.name)}</td>
       <td class="l"><select onchange="rosterSetGroup('${r.uid}', this)">${groupOptions(r.group)}</select></td>
-      <td class="l">${r.seat_no || ''}</td>
+      <td class="l">${escapeHtml(r.seat_no || '')}</td>
       <td class="l num">${r.seed_amount}</td>
-      <td class="l" style="font-family:monospace">${r.card_uid || '<span class="err">未綁定</span>'}</td>
+      <td class="l" style="font-family:monospace">${r.card_uid ? escapeHtml(r.card_uid) : '<span class="err">未綁定</span>'}</td>
       <td>${r.bound
-        ? `<button onclick="rosterUnbind('${r.uid}','${r.name}')">解綁</button>`
-        : `<button class="danger" onclick="rosterDel('${r.uid}','${r.name}')">刪除</button>`}</td>
+        ? `<button onclick="rosterUnbind('${r.uid}')">解綁</button>`
+        : `<button class="danger" onclick="rosterDel('${r.uid}')">刪除</button>`}</td>
     </tr>`;
   }
   $('#rosterTbl tbody').innerHTML = html;
@@ -388,14 +393,21 @@ async function rosterAdd() {
   } catch (e) { $('#rosterAddMsg').textContent = e.message; }
 }
 
-async function rosterUnbind(id, name) {
+function rosterEntryName(id) {
+  const e = roster && roster.entries.find(x => x.uid === id);
+  return e ? e.name : `#${id}`;
+}
+
+async function rosterUnbind(id) {
+  const name = rosterEntryName(id);
   if (!confirm(`解綁 ${name} 的卡片？（會刪除該學生帳戶；已有交易則不可解綁）`)) return;
   try { const r = await api('/api/admin/roster/unbind', post({ uid: id }));
         toast(r.ok ? `已解綁 ${name}` : r.message, !r.ok); await loadRoster(); }
   catch (e) { toast(e.message, true); }
 }
 
-async function rosterDel(id, name) {
+async function rosterDel(id) {
+  const name = rosterEntryName(id);
   if (!confirm(`從名單刪除 ${name}？`)) return;
   try { const r = await api('/api/admin/roster/' + id, { method: 'DELETE' });
         toast(r.ok ? `已刪除 ${name}` : r.message, !r.ok); await loadRoster(); }
@@ -453,7 +465,7 @@ function renderReportPick() {
   const sel = $('#reportPick'); if (!data) return;
   const cur = sel.value;
   sel.innerHTML = data.students.map(r =>
-    `<option value="${r.uid}">${r.name}${r.group ? ' (' + r.group + ')' : ''}</option>`).join('');
+    `<option value="${escapeHtml(r.uid)}">${escapeHtml(r.name)}${r.group ? ' (' + escapeHtml(r.group) + ')' : ''}</option>`).join('');
   if (cur) sel.value = cur;
 }
 // 成績單 / 批次列印走 admin 權限，需帶 token → fetch 後用 blob 開新分頁。

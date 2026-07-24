@@ -15,7 +15,7 @@ WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 
 import auth
 import schemas
-from db import SessionLocal, init_db
+from db import ReadSessionLocal, SessionLocal, init_db
 from services import bank, casino, guild, report, roster, topic1
 from services.txn import handle_scan
 
@@ -42,7 +42,7 @@ async def require_token(request: Request, call_next):
 
     hdr = request.headers.get("authorization", "")
     token = hdr[7:] if hdr.lower().startswith("bearer ") else ""
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         scope = auth.verify(s, token)
     if scope is None:
         return JSONResponse({"ok": False, "message": "未授權（請重新註冊裝置）"}, status_code=401)
@@ -66,7 +66,7 @@ def auth_revoke(req: schemas.RevokeReq):
 
 @app.get("/")
 def root():
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         return {"ok": True, **bank.admin_state(s)}
 
 
@@ -89,7 +89,7 @@ def students_search(name: str = Query(...)):
     from sqlalchemy import select
     from models import Student
     q = name.strip()
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         stmt = select(Student).where(Student.card_uid.is_not(None))
         if q:
             stmt = stmt.where(Student.name.contains(q))
@@ -108,7 +108,7 @@ def bank_transfer(req: schemas.TransferReq):
 # ── 主題一（Day1 大地遊戲：整組加錢） ──────────────────────────────────────
 @app.get("/api/topic1/groups")
 def topic1_groups():
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         return topic1.list_groups(s)
 
 
@@ -158,7 +158,7 @@ def casino_settle(req: schemas.CasinoSettleReq):
 
 @app.get("/api/casino/round/{round_id}")
 def casino_round(round_id: int):
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         return casino.get_round(s, round_id)
 
 
@@ -192,14 +192,14 @@ def admin_reset():
 
 @app.get("/api/admin/state")
 def admin_get_state():
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         return bank.admin_state(s)
 
 
 @app.get("/api/admin/dashboard")
 def admin_dashboard():
     """後台即時總覽：全域狀態 + 全部學生現況 + 彙總。Web 後台每隔幾秒輪詢。"""
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         return bank.dashboard(s)
 
 
@@ -218,7 +218,7 @@ def web_ledger():
 @app.get("/api/state")
 def public_state():
     """任何已註冊裝置可讀：目前天 + 市場開關（給 App 過濾攤位/輪詢關市）。"""
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         st = bank.admin_state(s)
         return {"current_day": st["current_day"], "market_open": st["market_open"]}
 
@@ -256,7 +256,7 @@ def admin_delete_student(uid: str):
 # ── 預先名單 / 大量綁卡 ─────────────────────────────────────────────────
 @app.get("/api/admin/roster")
 def roster_list():
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         return roster.list_all(s)
 
 
@@ -293,7 +293,7 @@ def roster_delete(uid: str):
 @app.get("/api/admin/qr-cards", response_class=HTMLResponse)
 def roster_qr_cards():
     """已綁卡學生的 QR 貼紙列印頁（A4）。瀏覽器 Ctrl+P → 存 PDF / 印出裁切。"""
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         return roster.qr_sheet(s)
 
 
@@ -329,7 +329,7 @@ def report_all_print():
     """全部學生成績單一份 HTML（每人一張 A4，page-break）。瀏覽器 Ctrl+P → 存 PDF/印。"""
     from sqlalchemy import select
     from models import Student
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         uids = s.scalars(select(Student).where(Student.card_uid.is_not(None))
                         .order_by(Student.final_rank_points, Student.name)).all()
         datas = [report.build_data(s, x.uid) for x in uids]
@@ -338,7 +338,7 @@ def report_all_print():
 
 @app.get("/api/report/{uid}/data")
 def report_data(uid: str):
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         data = report.build_data(s, uid)
         if data is None:
             raise HTTPException(404, "查無此學生")
@@ -347,7 +347,7 @@ def report_data(uid: str):
 
 @app.get("/api/report/{uid}", response_class=HTMLResponse)
 def report_html(uid: str):
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         data = report.build_data(s, uid)
         if data is None:
             raise HTTPException(404, "查無此學生")
@@ -359,7 +359,7 @@ def report_all():
     """批次：列所有人 + report link。"""
     from sqlalchemy import select
     from models import Student
-    with SessionLocal() as s:
+    with ReadSessionLocal() as s:
         studs = s.scalars(select(Student).where(Student.card_uid.is_not(None))).all()
         return JSONResponse([
             {"uid": x.uid, "name": x.name, "final_points": x.points,
