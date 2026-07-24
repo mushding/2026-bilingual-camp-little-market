@@ -120,10 +120,14 @@ class _MailScreenState extends State<MailScreen> {
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (_, i) {
         final c = _candidates![i];
-        final dis = [c['group'], c['seat_no']].where((x) => x != null).join(' · ');
+        final group = [c['group'], c['seat_no']].where((x) => x != null && x != '').join(' · ');
         return ListTile(
           title: Text(c['name'] ?? '?', style: const TextStyle(fontSize: 18)),
-          subtitle: Text(dis.isEmpty ? c['uid'] : dis),
+          subtitle: Text(
+            group.isEmpty ? '${c['uid']}' : '$group\n${c['uid']}',
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          ),
+          isThreeLine: group.isNotEmpty,
           trailing: const Icon(Icons.add_card),
           onTap: _busy ? null : () => _register(c),
         );
