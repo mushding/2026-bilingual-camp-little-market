@@ -20,6 +20,12 @@ class NfcService {
 
     await NfcManager.instance.startSession(
       pollingOptions: {NfcPollingOption.iso14443}, // NTAG = ISO 14443 Type A
+      // iOS：使用者按「取消」或 60 秒 timeout 會走這裡；沒這個 handler
+      // completer 永遠不 complete，UI 卡死在 reading 狀態
+      onError: (NfcError error) async {
+        debugPrint('NFC session error: ${error.message}');
+        if (!completer.isCompleted) completer.complete(null);
+      },
       onDiscovered: (NfcTag tag) async {
         try {
           final uid = _extractUid(tag);
