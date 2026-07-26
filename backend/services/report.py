@@ -396,3 +396,117 @@ def render_all(datas: list[dict]) -> str:
         return _wrap("小市集成績單（批次）", '<p style="padding:20px">尚無學生資料</p>')
     body = "".join(_render_body(d) for d in datas)
     return _wrap(f"小市集成績單批次（{len(datas)} 人）", body)
+
+
+# ── 頒獎典禮投影片（16:9 橫式，每項一頁，瀏覽器 Ctrl+P → 存 PDF 上台用） ──────
+_SLIDE_STYLE = """
+:root {
+  --ink:#3a3326; --muted:#9a8f76; --paper:#f7f0d8;
+  --green:#2f8a80; --gold:#cf9a2f; --purple:#e07b3f;
+  --silver:#9aa3ad; --bronze:#b9773e; --line:#e6dcc0;
+}
+* { box-sizing:border-box; }
+@page { size:297mm 167mm; margin:0; }
+html, body { margin:0; background:var(--paper);
+       -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+body { font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; color:var(--ink); }
+.slide { width:297mm; height:167mm; position:relative; overflow:hidden;
+         display:flex; flex-direction:column; align-items:center; justify-content:center;
+         text-align:center; page-break-after:always; }
+.slide:last-child { page-break-after:auto; }
+.deco { position:absolute; z-index:0; pointer-events:none; }
+.deco.tr { top:6mm; right:8mm; opacity:.55; transform:scale(1.6); }
+.deco.bl { bottom:0; left:0; opacity:.9; transform:scale(1.7); transform-origin:bottom left; }
+.deco.br { bottom:0; right:0; opacity:.9; transform:scale(1.7); transform-origin:bottom right; }
+.slideContent { position:relative; z-index:1; }
+.slideKicker { font-size:22px; letter-spacing:6px; color:var(--green); font-weight:700; }
+.slideTitle { font-size:56px; font-weight:800; margin:8px 0 28px; color:var(--ink); }
+.slideMedal { font-size:120px; line-height:1; margin-bottom:8px; }
+.slideName { font-size:88px; font-weight:800; color:var(--ink); }
+.slideGroup { font-size:26px; color:var(--muted); margin-top:6px; }
+.slideMetric { font-size:34px; font-weight:700; margin-top:26px; padding:10px 32px;
+               border-radius:999px; display:inline-block; }
+.slideMetric.gold { background:#f7ecc8; color:var(--gold); }
+.slideMetric.green { background:#e2efe9; color:var(--green); }
+.slideMetric.purple { background:#fbe6d6; color:var(--purple); }
+.rank1 .slideName { color:var(--gold); }
+.rank2 .slideName { color:var(--silver); }
+.rank3 .slideName { color:var(--bronze); }
+.rankLabel { font-size:30px; font-weight:700; letter-spacing:3px; margin-bottom:6px; }
+.rank1 .rankLabel { color:var(--gold); }
+.rank2 .rankLabel { color:var(--silver); }
+.rank3 .rankLabel { color:var(--bronze); }
+"""
+
+_RANK_LABEL = {1: "第一名", 2: "第二名", 3: "第三名"}
+_RANK_MEDAL = {1: "🥇", 2: "🥈", 3: "🥉"}
+
+
+def _slide(kicker, title, body_html, rank_class=""):
+    return f"""<div class="slide {rank_class}">
+<div class="deco tr">{_DECO_CLOUDS}</div>
+<div class="deco bl">{_DECO_ISLAND}</div>
+<div class="deco br">{_DECO_DUNE}</div>
+<div class="slideContent">
+<div class="slideKicker">{kicker}</div>
+<div class="slideTitle">{title}</div>
+{body_html}
+</div>
+</div>"""
+
+
+def _winner_slide(kicker, title, entry, metric_html, color):
+    esc = lambda x: html.escape(str(x))
+    if not entry:
+        body = '<div class="slideName" style="color:var(--muted)">（尚無資料）</div>'
+    else:
+        group = f'<div class="slideGroup">[{esc(entry["group"])}]</div>' if entry.get("group") else ""
+        body = (f'<div class="slideName">{esc(entry["name"])}</div>{group}'
+                f'<div class="slideMetric {color}">{metric_html}</div>')
+    return _slide(kicker, title, body)
+
+
+def _rank_slide(kicker, entry, rank, unit):
+    esc = lambda x: html.escape(str(x))
+    if not entry:
+        body = '<div class="slideName" style="color:var(--muted)">（尚無資料）</div>'
+    else:
+        group = f'<div class="slideGroup">[{esc(entry["group"])}]</div>' if entry.get("group") else ""
+        val = entry.get("points", entry.get("kingdom_points"))
+        body = (f'<div class="rankLabel">{_RANK_LABEL[rank]}</div>'
+                f'<div class="slideMedal">{_RANK_MEDAL[rank]}</div>'
+                f'<div class="slideName">{esc(entry["name"])}</div>{group}'
+                f'<div class="slideMetric gold">{val} {unit}</div>')
+    return _slide(kicker, "", body, rank_class=f"rank{rank}")
+
+
+def render_award_slides(a: dict) -> str:
+    """頒獎投影片，順序：最會賺錢 → 勤奮工作 → 刺激經濟 → 積分 3/2/1 → 管家 3/2/1。
+    16:9 橫式，一項一頁，瀏覽器 Ctrl+P → 存 PDF，上台簡報用（Preview/Acrobat 全螢幕翻頁）。"""
+    e = a.get("best_earner")
+    slides = [_winner_slide("💰 頒獎", "最會賺錢獎", e,
+                            (f'{"+" if e["diff"] >= 0 else ""}{e["diff"]} （較起始金）' if e else ""),
+                            "gold")]
+
+    w = a.get("hardest_worker")
+    slides.append(_winner_slide("💪 頒獎", "勤奮工作獎", w,
+                                f'完成 {w["count"]} 個公會任務' if w else "", "green"))
+
+    sp = a.get("big_spender")
+    slides.append(_winner_slide("🎉 頒獎", "刺激經濟獎", sp,
+                                f'總花費 ${sp["expense"]}' if sp else "", "purple"))
+
+    points_top3 = a.get("points_top3") or []
+    for rank in (3, 2, 1):
+        entry = points_top3[rank - 1] if len(points_top3) >= rank else None
+        slides.append(_rank_slide("🥇 積分榜", entry, rank, "分"))
+
+    kp_top3 = a.get("kp_top3") or []
+    for rank in (3, 2, 1):
+        entry = kp_top3[rank - 1] if len(kp_top3) >= rank else None
+        slides.append(_rank_slide("👑 管家獎", entry, rank, "點"))
+
+    body = "".join(slides)
+    return (f'<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
+            f'<title>頒獎典禮</title><style>{_SLIDE_STYLE}</style></head>'
+            f'<body>{body}</body></html>')

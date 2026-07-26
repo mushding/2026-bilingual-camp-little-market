@@ -214,7 +214,9 @@
   <section id="awards" class="panel">
     <div class="row">
       <button class="primary" onclick="loadAwards()">↻ 重新計算</button>
-      <span class="muted">即時算，隨時可按；不寫回任何資料，重複按結果一樣。</span>
+      <button onclick="openReport('/api/report/awards/print')">🎬 開啟頒獎投影片</button>
+      <span class="muted">即時算，隨時可按；不寫回任何資料，重複按結果一樣。
+        投影片於新分頁開啟，Ctrl/⌘+P 存成 PDF 上台用（16:9，一項一頁）。</span>
     </div>
     <div id="awardsBody"></div>
   </section>

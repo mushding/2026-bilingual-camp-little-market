@@ -395,6 +395,13 @@ def report_all_print():
         return report.render_all([d for d in datas if d])
 
 
+@app.get("/api/report/awards/print", response_class=HTMLResponse)
+def report_awards_print():
+    """頒獎投影片（16:9，一項一頁）。瀏覽器 Ctrl+P → 存 PDF，上台簡報用。"""
+    with ReadSessionLocal() as s:
+        return report.render_award_slides(bank.awards(s))
+
+
 @app.get("/api/report/{uid}/data")
 def report_data(uid: str):
     with ReadSessionLocal() as s:
