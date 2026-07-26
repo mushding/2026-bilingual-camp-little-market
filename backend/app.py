@@ -223,6 +223,13 @@ def admin_dashboard():
         return bank.dashboard(s)
 
 
+@app.get("/api/admin/awards")
+def admin_awards():
+    """頒獎榜：積分/管家前三名 + 最會賺錢/勤奮工作/刺激經濟。即時算，可重複按。"""
+    with ReadSessionLocal() as s:
+        return bank.awards(s)
+
+
 # ── Web 後台（電腦用，serve 在 /admin） ──────────────────────────────────
 @app.get("/admin", response_class=HTMLResponse)
 def web_admin():

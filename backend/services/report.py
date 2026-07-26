@@ -118,6 +118,31 @@ def build_data(session, uid: str) -> dict | None:
     }
 
 
+def bulk_expense_income(session) -> dict[str, tuple[int, int]]:
+    """全體學生的 (total_income, total_expense)，一次查完給頒獎榜用。
+    分類邏輯同 build_data()，只是攤平到所有人一次算，不逐人重查 Transaction。"""
+    from collections import defaultdict
+    totals: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    for t in session.scalars(select(Transaction)):
+        meta = json.loads(t.meta or "{}")
+        a = t.action
+        row = totals[t.uid]
+        if a == "game_settle":
+            row[1] += meta.get("cost", 0)
+            row[0] += meta.get("reward", 0)
+        elif a == "casino_payout":
+            net = meta.get("net", 0)
+            if net >= 0:
+                row[0] += net
+            else:
+                row[1] += -net
+        elif a in INCOME_ACTIONS:
+            row[0] += abs(t.amount)
+        elif a in EXPENSE_ACTIONS:
+            row[1] += abs(t.amount)
+    return {uid: (v[0], v[1]) for uid, v in totals.items()}
+
+
 def live_ranks(session, uid: str) -> tuple[int | None, int | None]:
     """即時名次（積分榜／管家獎），依目前全體已綁卡學生現況即算即回，不等 market_close。"""
     studs = session.scalars(select(Student).where(Student.card_uid.is_not(None))).all()

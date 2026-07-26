@@ -198,3 +198,48 @@ def dashboard(session) -> dict:
             "total_kp": sum(r["kingdom_points"] for r in rows),
         },
     }
+
+
+def awards(session) -> dict:
+    """頒獎榜：積分榜/管家榜前三名 + 最會賺錢／勤奮工作／刺激經濟三個單一得主。
+    即時算，不寫回任何欄位（可以在任何時間點按，重複按結果一樣只是即時值）。"""
+    from services.report import bulk_expense_income
+
+    studs = session.scalars(select(Student).where(Student.card_uid.is_not(None))).all()
+    if not studs:
+        return {"points_top3": [], "kp_top3": [], "best_earner": None,
+                "hardest_worker": None, "big_spender": None}
+
+    def brief(s, **extra):
+        d = {"uid": s.uid, "name": s.name, "group": s.group or ""}
+        d.update(extra)
+        return d
+
+    points_top3 = sorted(studs, key=lambda x: x.points, reverse=True)[:3]
+    kp_top3 = sorted(studs, key=lambda x: x.kingdom_points, reverse=True)[:3]
+
+    earner = max(studs, key=lambda x: (x.balance + x.deposit_balance) - x.seed_amount)
+    earner_diff = (earner.balance + earner.deposit_balance) - earner.seed_amount
+
+    completed: dict[str, int] = {}
+    for t in session.scalars(select(GuildTask).where(GuildTask.status == "completed")):
+        completed[t.uid] = completed.get(t.uid, 0) + 1
+    hardest_worker = None
+    if completed:
+        top_uid = max(completed, key=lambda u: completed[u])
+        if completed[top_uid] > 0:
+            match = next((x for x in studs if x.uid == top_uid), None)
+            if match:
+                hardest_worker = brief(match, count=completed[top_uid])
+
+    inc_exp = bulk_expense_income(session)
+    spender = max(studs, key=lambda x: inc_exp.get(x.uid, (0, 0))[1])
+    spender_expense = inc_exp.get(spender.uid, (0, 0))[1]
+
+    return {
+        "points_top3": [brief(s, points=s.points) for s in points_top3],
+        "kp_top3": [brief(s, kingdom_points=s.kingdom_points) for s in kp_top3],
+        "best_earner": brief(earner, diff=earner_diff),
+        "hardest_worker": hardest_worker,
+        "big_spender": brief(spender, expense=spender_expense),
+    }

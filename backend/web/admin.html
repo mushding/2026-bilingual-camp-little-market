@@ -60,6 +60,15 @@
   #login input { width:100%; margin:12px 0; text-align:center; }
   .muted { color:var(--muted); font-size:12px; }
   .pill { font-size:11px; padding:1px 8px; border-radius:999px; background:var(--sky); color:var(--teal-dark); font-weight:700; }
+  .awGrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:14px; margin-top:14px; }
+  .awCard h3 { margin:0 0 10px; font-size:16px; color:var(--teal-dark); }
+  .awRow { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px dashed var(--line); }
+  .awRow:last-child { border-bottom:none; }
+  .awMedal { font-size:22px; width:28px; text-align:center; flex:none; }
+  .awName { font-weight:700; flex:1; }
+  .awVal { font-weight:700; color:var(--paper); font-variant-numeric:tabular-nums; }
+  .awCard.single .awName { font-size:20px; margin-bottom:4px; }
+  .awCard.single .awVal { font-size:22px; color:var(--teal-dark); }
 </style>
 </head>
 <body>
@@ -86,6 +95,7 @@
   <button data-tab="admin" onclick="showTab('admin')">⚙️ 總控操作</button>
   <button data-tab="roster" onclick="showTab('roster')">🪪 綁卡名單</button>
   <button data-tab="report" onclick="showTab('report')">📄 成績單</button>
+  <button data-tab="awards" onclick="showTab('awards')">🏆 頒獎</button>
 </nav>
 <main>
 
@@ -199,6 +209,14 @@
         <button onclick="openSingleReport()">開啟此學生</button>
       </div>
     </div>
+  </section>
+
+  <section id="awards" class="panel">
+    <div class="row">
+      <button class="primary" onclick="loadAwards()">↻ 重新計算</button>
+      <span class="muted">即時算，隨時可按；不寫回任何資料，重複按結果一樣。</span>
+    </div>
+    <div id="awardsBody"></div>
   </section>
 
 </main>
@@ -330,6 +348,7 @@ function showTab(t) {
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('show', p.id === t));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
   if (t === 'roster') loadRoster();
+  if (t === 'awards') loadAwards();
 }
 
 // ── 綁卡名單 ──
@@ -512,6 +531,59 @@ async function openReport(path) {
 }
 function openSingleReport() {
   const uid = $('#reportPick').value; if (uid) openReport('/api/report/' + encodeURIComponent(uid));
+}
+
+// ── 頒獎 ──
+async function loadAwards() {
+  $('#awardsBody').innerHTML = '<p class="muted">計算中…</p>';
+  try {
+    const a = await api('/api/admin/awards');
+    renderAwards(a);
+  } catch (e) {
+    $('#awardsBody').innerHTML = `<p class="err">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function renderAwards(a) {
+  const who = (e, extra) => e
+    ? `<div class="awName">${escapeHtml(e.name)}${e.group ? '　<span class="muted">[' + escapeHtml(e.group) + ']</span>' : ''}</div>
+       <div class="awVal">${extra}</div>`
+    : `<div class="muted">（尚無資料）</div>`;
+
+  const medalList = (list, key, suffix) => {
+    if (!list || !list.length) return '<p class="muted">（尚無資料）</p>';
+    const medals = ['🥇', '🥈', '🥉'];
+    return list.map((e, i) => `
+      <div class="awRow">
+        <span class="awMedal">${medals[i] || ''}</span>
+        <span class="awName">${escapeHtml(e.name)}${e.group ? '　<span class="muted">[' + escapeHtml(e.group) + ']</span>' : ''}</span>
+        <span class="awVal">${e[key]}${suffix}</span>
+      </div>`).join('');
+  };
+
+  $('#awardsBody').innerHTML = `
+    <div class="awGrid">
+      <div class="card awCard">
+        <h3>🥇 積分榜（前三名）</h3>
+        ${medalList(a.points_top3, 'points', ' 分')}
+      </div>
+      <div class="card awCard">
+        <h3>👑 管家獎（天國點數前三名）</h3>
+        ${medalList(a.kp_top3, 'kingdom_points', ' 點')}
+      </div>
+      <div class="card awCard single">
+        <h3>💰 最會賺錢獎</h3>
+        ${who(a.best_earner, a.best_earner ? (a.best_earner.diff >= 0 ? '+' : '') + a.best_earner.diff + ' （較起始金）' : '')}
+      </div>
+      <div class="card awCard single">
+        <h3>💪 勤奮工作獎</h3>
+        ${who(a.hardest_worker, a.hardest_worker ? '完成 ' + a.hardest_worker.count + ' 個公會任務' : '')}
+      </div>
+      <div class="card awCard single">
+        <h3>🎉 刺激經濟獎</h3>
+        ${who(a.big_spender, a.big_spender ? '總花費 $' + a.big_spender.expense : '')}
+      </div>
+    </div>`;
 }
 
 // ── toast ──
