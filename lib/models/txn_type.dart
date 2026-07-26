@@ -14,7 +14,7 @@ enum TxnType {
   grocery('雜貨店', 'debit'),
   mailKp('郵政感謝卡', 'mail_kp'),
   meal('餐費', 'meal'),
-  casino21('賭場21點', 'casino'),
+  casino21('賭場10點半', 'casino'),
   casinoDice('賭場大小骰子', 'casino'),
   guildDraw('公會抽', 'guild_draw'),
   guildComplete('小遊戲完成', 'guild_complete');

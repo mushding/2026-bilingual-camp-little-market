@@ -43,7 +43,7 @@ final List<Stall> kStalls = [
   const Stall('exchange', '積分兌換', [TxnType.exchange], _d23),
   const Stall('grocery', '雜貨店', [TxnType.grocery], _d23),
   const Stall('mail', '郵政', [TxnType.mailKp], _d23),
-  const Stall('casino_21', '賭場21點', [TxnType.casino21], _d23),
+  const Stall('casino_21', '賭場10點半', [TxnType.casino21], _d23),
   const Stall('casino_dice', '賭場大小骰子', [TxnType.casinoDice], _d23),
   const Stall('guild', '公會台', [TxnType.guildDraw], _d23),
   // 9 款小遊戲關（Day2/3）

@@ -14,6 +14,20 @@ class PendingTask {
       );
 }
 
+/// 逾時作廢的公會任務歷史記錄。
+class ExpiredTask {
+  final String gameKey;
+  final String gameName;
+  final String drawnAt;
+  ExpiredTask(this.gameKey, this.gameName, this.drawnAt);
+
+  factory ExpiredTask.fromJson(Map<String, dynamic> j) => ExpiredTask(
+        j['game_key'] ?? '',
+        j['game_name'] ?? '',
+        j['drawn_at'] ?? '',
+      );
+}
+
 class StudentState {
   final String uid;
   final String studentName;
@@ -28,6 +42,7 @@ class StudentState {
   final bool ok;
   final String? assignedGame;
   final List<PendingTask> pendingTasks;
+  final List<ExpiredTask> expiredTasks;
 
   StudentState({
     required this.uid,
@@ -43,6 +58,7 @@ class StudentState {
     required this.ok,
     this.assignedGame,
     this.pendingTasks = const [],
+    this.expiredTasks = const [],
   });
 
   factory StudentState.fromJson(Map<String, dynamic> j) => StudentState(
@@ -60,6 +76,9 @@ class StudentState {
         assignedGame: j['assigned_game'],
         pendingTasks: ((j['pending_tasks'] ?? []) as List)
             .map((e) => PendingTask.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        expiredTasks: ((j['expired_tasks'] ?? []) as List)
+            .map((e) => ExpiredTask.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
 }

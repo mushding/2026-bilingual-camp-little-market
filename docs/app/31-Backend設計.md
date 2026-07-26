@@ -92,10 +92,10 @@ class ScanReq(BaseModel):
 | `deposit` | balance -= amount；deposit_balance += amount | amount≤balance、market_open |
 | `withdraw` | deposit_balance -= amount；balance += amount（amount=-1 代表全部） | amount≤deposit_balance、market_open |
 | `credit_kp` | kingdom_points += amount（見證固定 100） | **去重** `witness_log` unique(student_uid, staff_uid)；已給 → ok=false |
-| `donate` | balance -= amount；kingdom_points += amount（二三天同一套，**無 D3 bonus**） | amount>0、balance≥amount、market_open |
-| `exchange_points` | balance -= tier；points += TIER_MAP[tier] | tier∈{100,250,400,750}、balance≥tier、market_open |
+| `donate` | balance -= amount；kingdom_points += amount；**points += amount//2**（二三天同一套，**無 D3 bonus**） | amount>0、balance≥amount、market_open |
+| `exchange_points` | balance -= tier；points += TIER_MAP[tier] | tier∈{100,250,400,750,1500,3000}、balance≥tier、market_open |
 | `guild_draw` | **免手續費**，依 user input N 一次派 N 個不重複任務（見 §3） | market_open、N≥1、N ≤ 9−目前已持有數 |
-| `transfer` | src.balance -= amount；dst.balance += amount；**src.kingdom_points += amount**（兩學生對轉，無手續費無上限，轉出方 1:1 拿 KP） | amount>0、from≠to、src.balance≥amount、market_open |
+| `transfer` | src.balance -= amount；dst.balance += amount；**src.kingdom_points += amount；src.points += amount//2**（兩學生對轉，無手續費無上限，轉出方 1:1 拿 KP + 0.5x 拿積分） | amount>0、from≠to、src.balance≥amount、market_open |
 
 **積分兌換對照表**
 
@@ -173,7 +173,7 @@ POST /api/scan {action:guild_draw, uid, stall_id:'guild', amount:N, staff_uid}
 | 中 | 60 | 5 | 投籃高手、丟紙飛機、拍氣球、比手畫腳、記憶翻牌 |
 | 高 | 100 | 2 | 顏色分類、七巧板 |
 
-> 單一任務期望獎勵 62.22（免手續費即單抽期望淨值，SOT §3）。逾時作廢扣 100 罰款（免手續費後唯一嚇阻）；N 個任務共用同一個 8 分鐘倒數，抽越多、時限內跑完全部關卡越難，這是新的剎車機制（時間風險取代舊版手續費沉沒成本）。
+> 單一任務期望獎勵 62.22（免手續費即單抽期望淨值，SOT §3）。逾時作廢扣 100 罰款（免手續費後唯一嚇阻）；N 個任務共用同一個 15 分鐘倒數，抽越多、時限內跑完全部關卡越難，這是新的剎車機制（時間風險取代舊版手續費沉沒成本）。
 
 ### 3.2 小遊戲攤看 pending
 
@@ -219,7 +219,7 @@ GET  /api/casino/round/{id}                            # 續桌
 
 ### 4.1 結算規則
 
-**21 點（比大小，平手歸莊，賠 1 倍）**
+**10點半（比大小，平手歸莊，賠 1 倍）**
 
 | 結果 | 處理 | 淨值 |
 |---|---|---|
@@ -388,7 +388,7 @@ GET /api/report/all              # 批次：產所有人 HTML（zip 或逐頁）
 | `credit_kp` | 新增 | 聽見證 +100（雜貨店不再經此加 KP） |
 | `mail_kp` | 新增 | 郵政感謝卡核銷，by-name 反查寄件人，+100×n KP（不限張數） |
 | `exchange_points`（積分） | 新增 | 依 TIER_MAP 兌換 |
-| `donate` | 新增 | 奉獻 1:1 轉 KP（無下限，>0 即可，無 D3 bonus） |
+| `donate` | 新增 | 奉獻 1:1 轉 KP + 0.5x 轉積分（無下限，>0 即可，無 D3 bonus） |
 | `guild_draw` / `guild_complete` | 新增 | 公會抽取（免手續費，指定 N）/ 固定獎勵入帳 |
-| `transfer` | 新增 | 銀行轉帳：兩學生對轉，無手續費無上限，轉出方 1:1 拿 KP |
+| `transfer` | 新增 | 銀行轉帳：兩學生對轉，無手續費無上限，轉出方 1:1 拿 KP + 0.5x 拿積分 |
 | `interest` `market_close` | 新增 | 管理：結息／市場關閉 |

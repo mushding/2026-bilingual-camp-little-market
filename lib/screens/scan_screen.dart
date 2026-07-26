@@ -38,6 +38,8 @@ class _ScanScreenState extends State<ScanScreen> {
   String _bannerGroup = '';
   Timer? _bannerTimer;
   Timer? _pollTimer;
+  Timer? _tickTimer;
+  DateTime? _tasksFetchedAt;
   bool _marketClosedShown = false;
   bool _closingSoonShown = false;
 
@@ -52,7 +54,31 @@ class _ScanScreenState extends State<ScanScreen> {
   void dispose() {
     _bannerTimer?.cancel();
     _pollTimer?.cancel();
+    _tickTimer?.cancel();
     super.dispose();
+  }
+
+  /// 掃卡結果更新：記下拿到公會任務清單的時間點，讓待完成任務的倒數能
+  /// 每秒即時遞減顯示（不必再掃一次卡才會更新）。
+  void _setStudent(StudentState s) {
+    _student = s;
+    _tasksFetchedAt = DateTime.now();
+    _tickTimer?.cancel();
+    if (s.pendingTasks.isNotEmpty) {
+      _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  /// 依 _tasksFetchedAt 至今經過的秒數，即時遞減 pendingTasks 的剩餘秒數。
+  List<PendingTask> _liveTasks(StudentState s) {
+    if (s.pendingTasks.isEmpty || _tasksFetchedAt == null) return s.pendingTasks;
+    final elapsed = DateTime.now().difference(_tasksFetchedAt!).inSeconds;
+    return s.pendingTasks
+        .map((t) => PendingTask(t.gameKey, t.gameName, t.reward,
+            (t.remainingSeconds - elapsed) < 0 ? 0 : t.remainingSeconds - elapsed))
+        .toList();
   }
 
   Future<void> _pollMarket() async {
@@ -156,7 +182,7 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> _lookup(String uid) async {
     final s = await ApiClient.scan(uid: uid, stallId: _stall.id, action: 'lookup');
     setState(() {
-      _student = s;
+      _setStudent(s);
       _txn = _allowed.firstWhere((t) => t != TxnType.lookup,
           orElse: () => TxnType.lookup);
       _state = _S.loaded;
@@ -234,7 +260,7 @@ class _ScanScreenState extends State<ScanScreen> {
         break;
       case TxnType.donation:
         final v = await showAmountInput(context,
-            title: '奉獻金額', quickKeys: const [100, 500, 1000], hint: '現金 1:1 轉天國點數');
+            title: '奉獻金額', quickKeys: const [100, 500, 1000], hint: '現金轉天國點數，同時 +0.5x 積分');
         if (v == null) return;
         amount = v;
         break;
@@ -276,7 +302,7 @@ class _ScanScreenState extends State<ScanScreen> {
             : null,
       );
       setState(() {
-        _student = res;
+        _setStudent(res);
         _state = _S.result;
       });
       _showResultBanner(res);
@@ -533,7 +559,7 @@ class _ScanScreenState extends State<ScanScreen> {
         : null;
     final gameBlocked = _isGameStall && _state == _S.loaded && thisTask == null;
     return Column(children: [
-      StudentCard(s: s),
+      StudentCard(s: s, liveTasks: _liveTasks(s)),
       const SizedBox(height: 16),
       if (gameBlocked)
         Container(

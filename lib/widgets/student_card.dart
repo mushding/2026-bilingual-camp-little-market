@@ -5,7 +5,9 @@ import '../models/student_state.dart';
 /// 顯示學生：中文名 / 現金 / 積分 / 定存本利（天國點數不對外顯示）。
 class StudentCard extends StatelessWidget {
   final StudentState s;
-  const StudentCard({super.key, required this.s});
+  /// 覆寫 s.pendingTasks 顯示用（讓呼叫端可以做即時倒數，不必等下次掃卡）。
+  final List<PendingTask>? liveTasks;
+  const StudentCard({super.key, required this.s, this.liveTasks});
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +47,13 @@ class StudentCard extends StatelessWidget {
               const Divider(height: 20),
               const Text('公會待完成任務', style: TextStyle(fontSize: 11, color: AppColors.muted)),
               const SizedBox(height: 4),
-              ...s.pendingTasks.map(_taskRow),
+              ...(liveTasks ?? s.pendingTasks).map(_taskRow),
+            ],
+            if (s.expiredTasks.isNotEmpty) ...[
+              const Divider(height: 20),
+              const Text('公會逾時記錄', style: TextStyle(fontSize: 11, color: AppColors.muted)),
+              const SizedBox(height: 4),
+              ...s.expiredTasks.map(_expiredRow),
             ],
           ],
         ),
@@ -69,6 +77,16 @@ class StudentCard extends StatelessWidget {
       ]),
     );
   }
+
+  Widget _expiredRow(ExpiredTask t) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(children: [
+          const Icon(Icons.timer_off, size: 16, color: AppColors.red),
+          const SizedBox(width: 6),
+          Expanded(child: Text('${t.gameName}（逾時作廢，扣 \$100）',
+              style: const TextStyle(color: AppColors.muted))),
+        ]),
+      );
 
   Widget _stat(String label, String value, Color c) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,

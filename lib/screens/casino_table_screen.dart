@@ -179,7 +179,7 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('賭場 · ${_isDice ? "大小骰子" : "21點"}')),
+      appBar: AppBar(title: Text('賭場 · ${_isDice ? "大小骰子" : "10點半"}')),
       body: SafeArea(child: Padding(padding: const EdgeInsets.all(16), child: _content())),
     );
   }

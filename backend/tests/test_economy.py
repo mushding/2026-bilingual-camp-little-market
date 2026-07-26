@@ -64,12 +64,21 @@ def test_exchange_points():
     assert r2["points"] == 500 + TIER_MAP[100] == 600 and r2["balance"] == 300
 
 
+def test_exchange_points_large_tiers():
+    fresh_state(); add_student("B2", 5000)
+    r = scan(uid="B2", stall_id="exchange", action="exchange_points", tier=3000)
+    assert r["points"] == TIER_MAP[3000] == 4000 and r["balance"] == 2000
+    r2 = scan(uid="B2", stall_id="exchange", action="exchange_points", tier=1500)
+    assert r2["points"] == 4000 + TIER_MAP[1500] == 6000 and r2["balance"] == 500
+
+
 def test_donate_kp_no_d3_bonus():
     fresh_state(day="D3"); add_student("C", 500)
     r = scan(uid="C", stall_id="donation", action="donate", amount=100)
     assert r["kingdom_points"] == 100 and r["balance"] == 400  # 二三天同算法，無 bonus
+    assert r["points"] == 50  # 同時 0.5x 轉積分
     r2 = scan(uid="C", stall_id="donation", action="donate", amount=100)
-    assert r2["kingdom_points"] == 200
+    assert r2["kingdom_points"] == 200 and r2["points"] == 100
 
 
 def test_witness_dedup():
@@ -188,6 +197,7 @@ def test_bank_transfer():
         out = bank.transfer(s, "TA", "TB", 200)
     assert out["ok"] is True and out["from"]["balance"] == 300 and out["to"]["balance"] == 300
     assert out["from"]["kingdom_points"] == 200  # A 金額 1:1 轉天國點數
+    assert out["from"]["points"] == 100  # 同時 0.5x 轉積分
     with S.begin() as s:
         bad_self = bank.transfer(s, "TA", "TA", 10)
     assert bad_self["ok"] is False

@@ -18,6 +18,8 @@ class StudentState(BaseModel):
     assigned_game: str | None = None
     # 目前待完成的公會任務（含倒數秒數）
     pending_tasks: list[dict] = []
+    # 最近逾時作廢的公會任務（歷史記錄，最新在前）
+    expired_tasks: list[dict] = []
 
 
 class ScanReq(BaseModel):

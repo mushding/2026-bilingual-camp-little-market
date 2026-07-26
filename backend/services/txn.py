@@ -34,6 +34,20 @@ def pending_tasks_of(session, uid: str) -> list[dict]:
     return out
 
 
+def expired_tasks_of(session, uid: str, limit: int = 5) -> list[dict]:
+    """該生最近逾時作廢的公會任務（給學員卡顯示歷史記錄，最新在前）。"""
+    if session is None:
+        return []
+    rows = session.scalars(select(GuildTask).where(
+        GuildTask.uid == uid, GuildTask.status == "expired")
+        .order_by(GuildTask.id.desc()).limit(limit)).all()
+    out = []
+    for t in rows:
+        name = GAMES.get(t.game_key, (t.game_key,))[0]
+        out.append({"game_key": t.game_key, "game_name": name, "drawn_at": t.drawn_at})
+    return out
+
+
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -51,6 +65,7 @@ def state_to_out(s: Student, stall: str, action: str, message: str,
         kingdom_points=s.kingdom_points, deposit_balance=s.deposit_balance,
         stall=stall, action=action, message=message, ok=ok, assigned_game=assigned_game,
         pending_tasks=pending_tasks_of(sess, s.uid),
+        expired_tasks=expired_tasks_of(sess, s.uid),
     )
 
 
@@ -164,15 +179,19 @@ def handle_scan(session, req) -> StudentState:
         write_txn(session, s, req.stall_id, a, WITNESS_KP, day, {"staff_uid": req.staff_uid})
         return state_to_out(s, req.stall_id, a, f"學員聽見證 +{WITNESS_KP} 天國點數")
 
-    if a == "donate":  # 二三天同一套：1:1 轉 KP，無 D3 bonus
+    if a == "donate":  # 二三天同一套：1:1 轉 KP + 0.5x 轉積分，無 D3 bonus
         if req.amount <= 0:
             return state_to_out(s, req.stall_id, a, "金額需 > 0", ok=False)
         if s.balance < req.amount:
             return state_to_out(s, req.stall_id, a, "餘額不足", ok=False)
+        gained_points = req.amount // 2
         s.balance -= req.amount
         s.kingdom_points += req.amount
-        write_txn(session, s, req.stall_id, a, -req.amount, day, {"kp": req.amount})
-        return state_to_out(s, req.stall_id, a, f"學員奉獻 ${req.amount} → +{req.amount} KP")
+        s.points += gained_points
+        write_txn(session, s, req.stall_id, a, -req.amount, day,
+                  {"kp": req.amount, "points": gained_points})
+        return state_to_out(s, req.stall_id, a,
+                            f"學員奉獻 ${req.amount} → +{req.amount} KP、+{gained_points} 積分")
 
     if a == "exchange_points":
         tier = req.tier

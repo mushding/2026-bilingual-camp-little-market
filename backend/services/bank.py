@@ -79,7 +79,8 @@ def settle_interest(session, day: str) -> dict:
 
 def transfer(session, from_uid: str, to_uid: str, amount: int) -> dict:
     """服務三：兩學生一起找銀行，指定把錢從 A 轉到 B。無手續費、無金額上限。
-    A（轉出方）金額 1:1 轉天國點數，算在 A 頭上（docx v2.3）。"""
+    A（轉出方）金額 1:1 轉天國點數 + 0.5x 轉積分，算在 A 頭上（docx v2.3；積分
+    比例是給關主一個對外說法，天國點數本身不對外公告）。"""
     st = get_state(session)
     if not st.market_open:
         return {"ok": False, "message": "市場已關閉，僅能查詢"}
@@ -95,13 +96,16 @@ def transfer(session, from_uid: str, to_uid: str, amount: int) -> dict:
         return {"ok": False, "message": "查無此卡"}
     if src.balance < amount:
         return {"ok": False, "message": f"餘額不足（需 ${amount}，有 ${src.balance}）"}
+    gained_points = amount // 2
     src.balance -= amount
     dst.balance += amount
     src.kingdom_points += amount  # A 金額 1:1 轉天國點數
-    write_txn(session, src, "bank", "transfer_out", -amount, st.current_day, {"to": dst.uid, "kp": amount})
+    src.points += gained_points  # 同時 0.5x 轉積分
+    write_txn(session, src, "bank", "transfer_out", -amount, st.current_day,
+              {"to": dst.uid, "kp": amount, "points": gained_points})
     write_txn(session, dst, "bank", "transfer_in", amount, st.current_day, {"from": src.uid})
     return {"ok": True, "from": {"uid": src.uid, "name": src.name, "balance": src.balance,
-                                "kingdom_points": src.kingdom_points},
+                                "points": src.points, "kingdom_points": src.kingdom_points},
             "to": {"uid": dst.uid, "name": dst.name, "balance": dst.balance}, "amount": amount}
 
 
