@@ -184,6 +184,26 @@ def admin_market_close():
         return out
 
 
+@app.post("/api/admin/day_close")
+def admin_day_close():
+    """當日截止：凍結交易，換日或重新開市即恢復（無折現）。"""
+    with SessionLocal.begin() as s:
+        return bank.day_close(s)
+
+
+@app.post("/api/admin/day_open")
+def admin_day_open():
+    with SessionLocal.begin() as s:
+        return bank.day_open(s)
+
+
+@app.post("/api/admin/closing_soon")
+def admin_closing_soon():
+    """廣播「5 分鐘後結束」：各攤 App 輪詢到旗標會跳提醒。"""
+    with SessionLocal.begin() as s:
+        return bank.notify_closing(s)
+
+
 @app.post("/api/admin/reset")
 def admin_reset():
     with SessionLocal.begin() as s:
@@ -217,10 +237,11 @@ def web_ledger():
 
 @app.get("/api/state")
 def public_state():
-    """任何已註冊裝置可讀：目前天 + 市場開關（給 App 過濾攤位/輪詢關市）。"""
+    """任何已註冊裝置可讀：目前天 + 市場開關 + 5分鐘提醒（給 App 過濾攤位/輪詢）。"""
     with ReadSessionLocal() as s:
         st = bank.admin_state(s)
-        return {"current_day": st["current_day"], "market_open": st["market_open"]}
+        return {"current_day": st["current_day"], "market_open": st["market_open"],
+                "closing_soon": st["closing_soon"]}
 
 
 @app.post("/api/admin/bind")

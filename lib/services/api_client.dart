@@ -153,6 +153,15 @@ class ApiClient {
   static Future<Map<String, dynamic>> adminMarketClose() =>
       _post('/api/admin/market_close', {});
 
+  static Future<Map<String, dynamic>> adminDayClose() =>
+      _post('/api/admin/day_close', {});
+
+  static Future<Map<String, dynamic>> adminDayOpen() =>
+      _post('/api/admin/day_open', {});
+
+  static Future<Map<String, dynamic>> adminClosingSoon() =>
+      _post('/api/admin/closing_soon', {});
+
   static Future<Map<String, dynamic>> adminReset() =>
       _post('/api/admin/reset', {});
 

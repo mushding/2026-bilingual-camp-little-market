@@ -12,7 +12,7 @@ TIER_MAP = {100: 100, 250: 300, 400: 500, 750: 1000}
 
 # 公會（打工水龍頭）
 GUILD_FEE = 0                    # 免手續費（v2.3：學生指定抽幾個，關主輸入數字，一次派 N 個不重複任務）
-TASK_TIMEOUT_MIN = 8            # 每個任務限時 8 分鐘
+TASK_TIMEOUT_MIN = 15           # 每個任務限時 15 分鐘（試玩後從 8 調長，減少誤逾時）
 TASK_EXPIRE_PENALTY = 100       # 逾時扣 100（免手續費後，逾時罰款是唯一嚇阻）
 DIFFICULTY_REWARD = {"low": 30, "mid": 60, "high": 100}
 

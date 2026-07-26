@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../models/student_state.dart';
 
-/// 顯示學生：中文名 / 現金 / 積分 / 天國點數 / 定存本利。
+/// 顯示學生：中文名 / 現金 / 積分 / 定存本利（天國點數不對外顯示）。
 class StudentCard extends StatelessWidget {
   final StudentState s;
   const StudentCard({super.key, required this.s});
@@ -35,10 +35,10 @@ class StudentCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(s.uid, style: const TextStyle(fontFamily: 'monospace', color: AppColors.muted, fontSize: 12)),
             const Divider(height: 20),
+            // 天國點數不對外公告：App 端不顯示，只留後台 dashboard 看得到。
             Wrap(spacing: 18, runSpacing: 8, children: [
               _stat('現金', '\$${s.balance}', AppColors.teal),
               _stat('積分', '${s.points}', AppColors.brown),
-              _stat('天國點數', '${s.kingdomPoints}', AppColors.paper),
               _stat('定存本利', '\$${s.depositBalance}', AppColors.tealDark),
             ]),
             if (s.pendingTasks.isNotEmpty) ...[

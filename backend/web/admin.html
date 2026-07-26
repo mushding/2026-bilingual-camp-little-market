@@ -114,6 +114,16 @@
       <div class="row" id="settleBtns"></div>
     </div>
     <div class="card">
+      <h3>每日場控（截止 / 開市 / 5 分鐘提醒）</h3>
+      <p>每場結束按「當日截止」凍結交易（學生才停得下來，不折現）；換日或按「重新開市」恢復。
+         「5 分鐘提醒」會讓所有關主手機跳提醒。</p>
+      <div class="row">
+        <button class="warn" onclick="confirmRun('🛑 當日截止？凍結所有交易（不折現），換日或重新開市即恢復','/api/admin/day_close')">🛑 當日截止</button>
+        <button onclick="runSimple('/api/admin/day_open','重新開市')">▶️ 重新開市</button>
+        <button class="primary" onclick="runSimple('/api/admin/closing_soon','5分鐘提醒')">⏰ 廣播 5 分鐘提醒</button>
+      </div>
+    </div>
+    <div class="card">
       <h3>市場關閉 market_close（D3 突襲，不可逆）</h3>
       <p>所有未兌換現金＋定存本利 ×0.1（銷毀 90%），市場凍結，凍結名次。只按一次。</p>
       <button class="warn" onclick="confirmRun('🔒 市場關閉？銷毀 90% 現金、凍結市場，不可逆','/api/admin/market_close')">🔒 市場關閉</button>
@@ -265,7 +275,9 @@ function renderState() {
   const st = data.state;
   $('#dayTag').textContent = '天：' + st.current_day;
   const m = $('#mktTag');
-  m.textContent = st.market_open ? '市場開啟' : '市場已關閉';
+  m.textContent = st.market_open
+    ? (st.closing_soon ? '市場開啟 ⏰5分鐘提醒中' : '市場開啟')
+    : (st.final_closed ? '市場已關閉（最終）' : '市場已關閉（當日截止）');
   m.className = 'tag' + (st.market_open ? '' : ' closed');
 }
 
@@ -452,6 +464,13 @@ async function confirmRun(msg, path) {
   if (!confirm(msg + '\n\n確定執行？')) return;
   try { const r = await api(path, { method: 'POST' }); await poll(); toast('完成：' + JSON.stringify(r)); }
   catch (e) { toast(e.message, true); }
+}
+async function runSimple(path, label) {
+  try {
+    const r = await api(path, { method: 'POST' });
+    await poll();
+    toast(r.ok === false ? (r.message || label + '失敗') : label + '完成', r.ok === false);
+  } catch (e) { toast(e.message, true); }
 }
 async function revoke() {
   const label = $('#revokeLabel').value.trim();

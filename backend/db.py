@@ -59,6 +59,14 @@ def init_db():
     from models import Student, GameState  # noqa: F401 — 確保 metadata 載入
     import models  # noqa: F401
     Base.metadata.create_all(write_engine)
+    # 舊 DB 補欄位（create_all 不會 ALTER 既有表；欄位已存在就略過）
+    with write_engine.begin() as conn:
+        for col in ("closing_soon", "final_closed"):
+            try:
+                conn.exec_driver_sql(
+                    f"ALTER TABLE game_state ADD COLUMN {col} INTEGER DEFAULT 0")
+            except Exception:
+                pass
     # 確保 game_state 單列存在
     with SessionLocal.begin() as s:
         if s.get(models.GameState, 1) is None:

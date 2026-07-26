@@ -160,6 +160,38 @@ class _AdminScreenState extends State<AdminScreen> {
                 ),
           ]),
           const Divider(height: 32),
+          const Text('每日場控（截止/開市/5分鐘提醒）', style: _h),
+          const Text('每場結束按「當日截止」凍結交易（學生才停得下來）；換日或按「重新開市」恢復。'
+              '「5分鐘提醒」會讓所有關主手機跳提醒。',
+              style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            FilledButton.tonal(
+              onPressed: _busy
+                  ? null
+                  : () async {
+                      if (await _confirm('當日截止', '凍結所有交易（不折現）。\n換日或按「重新開市」即恢復。確定？')) {
+                        await _run(() => ApiClient.adminDayClose(), '當日截止');
+                      }
+                    },
+              child: const Text('🛑 當日截止'),
+            ),
+            OutlinedButton(
+              onPressed: _busy
+                  ? null
+                  : () => _run(() => ApiClient.adminDayOpen(), '重新開市'),
+              child: const Text('▶️ 重新開市'),
+            ),
+            FilledButton.tonal(
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.yellow, foregroundColor: AppColors.brown),
+              onPressed: _busy
+                  ? null
+                  : () => _run(() => ApiClient.adminClosingSoon(), '5分鐘提醒'),
+              child: const Text('⏰ 廣播 5 分鐘提醒'),
+            ),
+          ]),
+          const Divider(height: 32),
           const Text('市場關閉 market_close（D3 突襲，不可逆）', style: _h),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.red),

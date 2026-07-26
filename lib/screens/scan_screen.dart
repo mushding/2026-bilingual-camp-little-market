@@ -39,6 +39,7 @@ class _ScanScreenState extends State<ScanScreen> {
   Timer? _bannerTimer;
   Timer? _pollTimer;
   bool _marketClosedShown = false;
+  bool _closingSoonShown = false;
 
   @override
   void initState() {
@@ -55,11 +56,33 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Future<void> _pollMarket() async {
-    if (!Settings.instance.enrolled || _marketClosedShown) return;
+    if (!Settings.instance.enrolled) return;
     try {
       final st = await ApiClient.appState();
-      if (st['market_open'] == false && mounted && !_marketClosedShown) {
+      if (!mounted) return;
+      if (st['market_open'] == true) {
+        // 重新開市（當日截止後隔天）→ 重置提示閂，之後再截止能再次跳提醒
+        _marketClosedShown = false;
+        if (st['closing_soon'] == true && !_closingSoonShown) {
+          _closingSoonShown = true;
+          await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: AppColors.yellow,
+              title: const Text('⏰ 剩 5 分鐘'),
+              content: const Text('本場小市集即將結束，請提醒學員把握時間、盡快完成交易。',
+                  style: TextStyle(fontSize: 18, color: AppColors.brown)),
+              actions: [
+                FilledButton(
+                    onPressed: () => Navigator.pop(ctx), child: const Text('知道了')),
+              ],
+            ),
+          );
+        }
+        if (st['closing_soon'] != true) _closingSoonShown = false;
+      } else if (!_marketClosedShown) {
         _marketClosedShown = true;
+        _closingSoonShown = false;
         await showDialog(
           context: context,
           barrierDismissible: false,
@@ -264,6 +287,8 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   /// 交易結果 banner：帶姓名+組別，3 秒自動關（或按 X），關後回等待掃卡。
+  /// 公會抽任務例外：結果停留在畫面上（列出抽到哪些關卡），關主按 X 才關，
+  /// 方便讓學員仔細看抽到什麼。
   void _showResultBanner(StudentState res) {
     _bannerTimer?.cancel();
     setState(() {
@@ -272,7 +297,9 @@ class _ScanScreenState extends State<ScanScreen> {
       _bannerName = res.studentName;
       _bannerGroup = res.group;
     });
-    _bannerTimer = Timer(const Duration(seconds: 3), _dismissBanner);
+    if (res.action != 'guild_draw') {
+      _bannerTimer = Timer(const Duration(seconds: 3), _dismissBanner);
+    }
   }
 
   void _dismissBanner() {
@@ -331,6 +358,10 @@ class _ScanScreenState extends State<ScanScreen> {
     if (amount > 0) detail += ' \$$amount';
     if (amount == -1) detail += ' 全部';
     if (tier > 0) detail += ' 兌換檔 \$$tier';
+    if (t == TxnType.guildDraw) {
+      detail += '\n\n⚠️ 請提醒學員：每個任務限時 15 分鐘，'
+          '逾時未完成自動作廢並扣 \$100';
+    }
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -495,17 +526,61 @@ class _ScanScreenState extends State<ScanScreen> {
 
     // loaded / submitting / result
     final s = _student!;
+    // 小遊戲關：掃卡先驗有沒有抽到本關（沒抽到 → 明顯提示、不能結算）。
+    // 流程：學員遊戲前掃一次確認有抽到 → 玩 → 玩完再掃一次按「完成關卡結算」。
+    final thisTask = _isGameStall
+        ? s.pendingTasks.where((pt) => pt.gameKey == _stall.id).firstOrNull
+        : null;
+    final gameBlocked = _isGameStall && _state == _S.loaded && thisTask == null;
     return Column(children: [
       StudentCard(s: s),
       const SizedBox(height: 16),
-      DropdownButtonFormField<TxnType>(
-        value: _txn,
-        decoration: const InputDecoration(labelText: '交易類型', border: OutlineInputBorder()),
-        items: _allowed
-            .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
-            .toList(),
-        onChanged: _state == _S.submitting ? null : (v) => setState(() => _txn = v),
-      ),
+      if (gameBlocked)
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.red.withValues(alpha: 0.15),
+            border: Border.all(color: AppColors.red, width: 2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Row(children: [
+            Icon(Icons.block, color: AppColors.red),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text('沒有抽到這關喔！\n請先到公會台抽任務再來闖關',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ]),
+        )
+      else if (_isGameStall && thisTask != null && _state == _S.loaded)
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.mint,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(children: [
+            const Icon(Icons.check_circle, color: AppColors.tealDark),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '有抽到本關：${thisTask.gameName}（獎勵 \$${thisTask.reward}）\n'
+                '剩 ${thisTask.remainingSeconds ~/ 60}:${(thisTask.remainingSeconds % 60).toString().padLeft(2, '0')}'
+                '　遊戲完成後按下方結算',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ]),
+        )
+      else
+        DropdownButtonFormField<TxnType>(
+          value: _txn,
+          decoration: const InputDecoration(labelText: '交易類型', border: OutlineInputBorder()),
+          items: _allowed
+              .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
+              .toList(),
+          onChanged: _state == _S.submitting ? null : (v) => setState(() => _txn = v),
+        ),
       const SizedBox(height: 12),
       Row(children: [
         Expanded(
@@ -518,10 +593,13 @@ class _ScanScreenState extends State<ScanScreen> {
         Expanded(
           flex: 2,
           child: FilledButton(
-            onPressed: _state == _S.submitting ? null : _execute,
+            onPressed: _state == _S.submitting || gameBlocked ? null : _execute,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              child: Text(_state == _S.submitting ? '處理中…' : '執 行',
+              child: Text(
+                  _state == _S.submitting
+                      ? '處理中…'
+                      : (_isGameStall ? '完成關卡結算' : '執 行'),
                   style: const TextStyle(fontSize: 18, letterSpacing: 2)),
             ),
           ),

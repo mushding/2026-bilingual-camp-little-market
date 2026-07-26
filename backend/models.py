@@ -103,3 +103,5 @@ class GameState(Base):
     market_open: Mapped[int] = mapped_column(Integer, default=1)
     settlement_count: Mapped[int] = mapped_column(Integer, default=0)
     settled_days: Mapped[str] = mapped_column(Text, default="[]")  # JSON list
+    closing_soon: Mapped[int] = mapped_column(Integer, default=0)  # 5分鐘提醒廣播（App 輪詢顯示）
+    final_closed: Mapped[int] = mapped_column(Integer, default=0)  # D3 最終關市（×0.1、不可逆）

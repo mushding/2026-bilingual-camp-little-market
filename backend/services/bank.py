@@ -16,7 +16,42 @@ def set_day(session, day: str) -> dict:
         return {"ok": False, "message": "day 需 D1/D2/D3"}
     st = get_state(session)
     st.current_day = day
-    return {"ok": True, "current_day": day}
+    # 換日 = 新的一場開始：自動重新開市（最終關市後除外）、清 5 分鐘提醒
+    if not st.final_closed:
+        st.market_open = 1
+    st.closing_soon = 0
+    return {"ok": True, "current_day": day, "market_open": bool(st.market_open)}
+
+
+def day_close(session) -> dict:
+    """當日截止：凍結交易（不折現、不算名次），換日或按「重新開市」即恢復。"""
+    st = get_state(session)
+    if not st.market_open:
+        return {"ok": False, "message": "市場已是關閉狀態"}
+    st.market_open = 0
+    st.closing_soon = 0
+    return {"ok": True, "market_open": False}
+
+
+def day_open(session) -> dict:
+    """重新開市（當日截止的反向操作）。最終關市後不可再開。"""
+    st = get_state(session)
+    if st.final_closed:
+        return {"ok": False, "message": "已最終關市（D3 折現），不可重新開市"}
+    if st.market_open:
+        return {"ok": False, "message": "市場已是開啟狀態"}
+    st.market_open = 1
+    st.closing_soon = 0
+    return {"ok": True, "market_open": True}
+
+
+def notify_closing(session) -> dict:
+    """5 分鐘結束提醒：設旗標，各攤 App 輪詢到會跳提醒給關主。"""
+    st = get_state(session)
+    if not st.market_open:
+        return {"ok": False, "message": "市場已關閉，不需提醒"}
+    st.closing_soon = 1
+    return {"ok": True, "closing_soon": True}
 
 
 def settle_interest(session, day: str) -> dict:
@@ -86,6 +121,8 @@ def market_close(session) -> dict:
                   {"taxable": taxable})
         affected += 1
     st.market_open = 0
+    st.final_closed = 1
+    st.closing_soon = 0
     return {"ok": True, "students": affected, "market_open": False}
 
 
@@ -111,6 +148,8 @@ def reset_all(session) -> dict:
     st.market_open = 1
     st.settlement_count = 0
     st.settled_days = "[]"
+    st.closing_soon = 0
+    st.final_closed = 0
     return {"ok": True, "students_reset": n}
 
 
@@ -118,7 +157,9 @@ def admin_state(session) -> dict:
     st = get_state(session)
     return {"current_day": st.current_day, "market_open": bool(st.market_open),
             "settlement_count": st.settlement_count,
-            "settled_days": json.loads(st.settled_days or "[]")}
+            "settled_days": json.loads(st.settled_days or "[]"),
+            "closing_soon": bool(st.closing_soon),
+            "final_closed": bool(st.final_closed)}
 
 
 def dashboard(session) -> dict:

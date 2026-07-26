@@ -145,9 +145,11 @@ def test_guild_task_timeout_penalty():
     from datetime import datetime, timedelta, timezone
     fresh_state(); add_student("K", 2000)
     scan(uid="K", stall_id="guild", action="guild_draw", amount=1)  # bal 2000, 1 task
-    # 把 drawn_at 改成 9 分鐘前（逾時線 8 分鐘）
+    # 把 drawn_at 改成逾時線後 1 分鐘（跟著 TASK_TIMEOUT_MIN 走，改常數不用改測試）
+    from constants import TASK_TIMEOUT_MIN
     from sqlalchemy import select as _sel
-    past = (datetime.now(timezone.utc) - timedelta(minutes=9)).isoformat(timespec="seconds")
+    past = (datetime.now(timezone.utc)
+            - timedelta(minutes=TASK_TIMEOUT_MIN + 1)).isoformat(timespec="seconds")
     with S.begin() as s:
         t = s.scalars(_sel(models.GuildTask).where(models.GuildTask.uid == "K")).first()
         t.drawn_at = past
