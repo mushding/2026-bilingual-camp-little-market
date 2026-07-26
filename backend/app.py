@@ -274,6 +274,31 @@ def admin_delete_student(uid: str):
         return {"ok": True, "uid": uid, "name": name}
 
 
+@app.delete("/api/admin/students/purge")
+def admin_purge_students(name_prefix: str = Query(...)):
+    """依姓名前綴整批刪除 Student + 關聯的 Transaction/GuildTask/CasinoBet/WitnessLog
+    （試玩假帳號善後用，連交易紀錄一起砍，不受「有交易則拒絕」保護）。
+    要求前綴長度 ≥ 2，避免手滑整批清空。"""
+    from sqlalchemy import delete, select
+    from models import CasinoBet, GuildTask, Student, Transaction, WitnessLog
+    prefix = name_prefix.strip()
+    if len(prefix) < 2:
+        return {"ok": False, "message": "name_prefix 至少 2 字，避免誤刪"}
+    with SessionLocal.begin() as s:
+        studs = s.scalars(select(Student).where(Student.name.startswith(prefix))).all()
+        uids = [x.uid for x in studs]
+        names = [x.name for x in studs]
+        if not uids:
+            return {"ok": True, "deleted": 0, "names": []}
+        s.execute(delete(Transaction).where(Transaction.uid.in_(uids)))
+        s.execute(delete(GuildTask).where(GuildTask.uid.in_(uids)))
+        s.execute(delete(CasinoBet).where(CasinoBet.uid.in_(uids)))
+        s.execute(delete(WitnessLog).where(WitnessLog.student_uid.in_(uids)))
+        for x in studs:
+            s.delete(x)
+        return {"ok": True, "deleted": len(uids), "names": names}
+
+
 # ── 預先名單 / 大量綁卡 ─────────────────────────────────────────────────
 @app.get("/api/admin/roster")
 def roster_list():
