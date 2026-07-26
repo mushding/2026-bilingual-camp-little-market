@@ -455,6 +455,17 @@ def _slide(kicker, title, body_html, rank_class=""):
 </div>"""
 
 
+def _teaser_slide(kicker, title):
+    """揭曉前一頁：只有獎項名稱，吊胃口用（上台先停這頁講規則/描述，再翻下一頁公布名字）。"""
+    return _slide(kicker, title, "")
+
+
+def _rank_teaser_slide(kicker, rank):
+    """名次揭曉前一頁：只有名次+獎牌，不露名字。"""
+    body = f'<div class="rankLabel">{_RANK_LABEL[rank]}</div><div class="slideMedal">{_RANK_MEDAL[rank]}</div>'
+    return _slide(kicker, "", body, rank_class=f"rank{rank}")
+
+
 def _winner_slide(kicker, title, entry, metric_html, color):
     esc = lambda x: html.escape(str(x))
     if not entry:
@@ -482,28 +493,34 @@ def _rank_slide(kicker, entry, rank, unit):
 
 def render_award_slides(a: dict) -> str:
     """頒獎投影片，順序：最會賺錢 → 勤奮工作 → 刺激經濟 → 積分 3/2/1 → 管家 3/2/1。
-    16:9 橫式，一項一頁，瀏覽器 Ctrl+P → 存 PDF，上台簡報用（Preview/Acrobat 全螢幕翻頁）。"""
+    每個公布名字的頁面前都先一頁只有獎項/名次（吊胃口用）。
+    16:9 橫式，瀏覽器 Ctrl+P → 存 PDF，上台簡報用（Preview/Acrobat 全螢幕翻頁）。"""
     e = a.get("best_earner")
-    slides = [_winner_slide("💰 頒獎", "最會賺錢獎", e,
-                            (f'{"+" if e["diff"] >= 0 else ""}{e["diff"]} （較起始金）' if e else ""),
-                            "gold")]
+    slides = [_teaser_slide("💰 頒獎", "最會賺錢獎")]
+    slides.append(_winner_slide("💰 頒獎", "最會賺錢獎", e,
+                                (f'{"+" if e["diff"] >= 0 else ""}{e["diff"]} （較起始金）' if e else ""),
+                                "gold"))
 
     w = a.get("hardest_worker")
+    slides.append(_teaser_slide("💪 頒獎", "勤奮工作獎"))
     slides.append(_winner_slide("💪 頒獎", "勤奮工作獎", w,
                                 f'完成 {w["count"]} 個公會任務' if w else "", "green"))
 
     sp = a.get("big_spender")
+    slides.append(_teaser_slide("🎉 頒獎", "刺激經濟獎"))
     slides.append(_winner_slide("🎉 頒獎", "刺激經濟獎", sp,
                                 f'總花費 ${sp["expense"]}' if sp else "", "purple"))
 
     points_top3 = a.get("points_top3") or []
     for rank in (3, 2, 1):
         entry = points_top3[rank - 1] if len(points_top3) >= rank else None
+        slides.append(_rank_teaser_slide("🥇 積分榜", rank))
         slides.append(_rank_slide("🥇 積分榜", entry, rank, "分"))
 
     kp_top3 = a.get("kp_top3") or []
     for rank in (3, 2, 1):
         entry = kp_top3[rank - 1] if len(kp_top3) >= rank else None
+        slides.append(_rank_teaser_slide("👑 管家獎", rank))
         slides.append(_rank_slide("👑 管家獎", entry, rank, "點"))
 
     body = "".join(slides)
