@@ -65,6 +65,19 @@ def set_group(s, uid: str, group: str | None) -> dict:
     return {"ok": True, "uid": stu.uid, "name": stu.name, "group": g or ""}
 
 
+def set_seed(s, uid: str, seed_amount: int) -> dict:
+    """改起始金（開賽前修正用）。已有交易紀錄則拒絕。"""
+    stu = s.get(Student, uid)
+    if stu is None:
+        return {"ok": False, "message": "查無此名單項目"}
+    txn = s.scalars(select(Transaction).where(Transaction.uid == uid).limit(1)).first()
+    if txn:
+        return {"ok": False, "message": f"{stu.name} 已有交易紀錄，不可改起始金"}
+    stu.seed_amount = seed_amount
+    stu.balance = seed_amount
+    return {"ok": True, "uid": stu.uid, "name": stu.name, "seed_amount": seed_amount}
+
+
 def unbind(s, uid: str) -> dict:
     """解綁（營會前修正用）：清 card_uid，身分保留。已有交易紀錄則拒絕。"""
     stu = s.get(Student, uid)

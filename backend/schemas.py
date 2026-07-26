@@ -78,6 +78,11 @@ class RosterSetGroupReq(BaseModel):
     group: str | None = None
 
 
+class RosterSetSeedReq(BaseModel):
+    uid: str
+    seed_amount: int
+
+
 class GuildCompleteReq(BaseModel):
     student_uid: str
     stall_id: str

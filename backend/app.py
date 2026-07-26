@@ -284,6 +284,12 @@ def roster_set_group(req: schemas.RosterSetGroupReq):
         return roster.set_group(s, req.uid, req.group)
 
 
+@app.post("/api/admin/roster/set_seed")
+def roster_set_seed(req: schemas.RosterSetSeedReq):
+    with SessionLocal.begin() as s:
+        return roster.set_seed(s, req.uid, req.seed_amount)
+
+
 @app.delete("/api/admin/roster/{uid}")
 def roster_delete(uid: str):
     with SessionLocal.begin() as s:
