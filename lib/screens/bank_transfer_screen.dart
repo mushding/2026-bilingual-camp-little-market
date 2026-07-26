@@ -4,6 +4,7 @@ import '../models/student_state.dart';
 import '../services/api_client.dart';
 import '../services/nfc_service.dart';
 import '../widgets/amount_input_sheet.dart';
+import 'qr_scan_screen.dart';
 
 /// 銀行服務三：轉帳。感應 A 卡 → 輸入金額 → 感應 B 卡 → 確認送出。
 /// 無手續費、無金額上限；市場關閉後不可轉（跟其他資金操作一致）。
@@ -23,13 +24,25 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
   String? _msg;
   bool _msgOk = true;
 
-  Future<void> _scanFrom() async {
+  Future<void> _scanFromNfc() async {
     setState(() => _step = _Step.busy);
     final uid = await NfcService.readUidOnce();
     if (uid == null) {
       setState(() => _step = _Step.scanFrom);
       return;
     }
+    await _lookupFrom(uid);
+  }
+
+  Future<void> _scanFromQr() async {
+    final uid = await Navigator.push<String>(
+        context, MaterialPageRoute(builder: (_) => const QrScanScreen()));
+    if (uid == null) return;
+    setState(() => _step = _Step.busy);
+    await _lookupFrom(uid);
+  }
+
+  Future<void> _lookupFrom(String uid) async {
     final s = await ApiClient.scan(uid: uid, stallId: 'bank', action: 'lookup');
     if (!s.ok) {
       setState(() {
@@ -54,13 +67,25 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
     });
   }
 
-  Future<void> _scanTo() async {
+  Future<void> _scanToNfc() async {
     setState(() => _step = _Step.busy);
     final uid = await NfcService.readUidOnce();
     if (uid == null) {
       setState(() => _step = _Step.scanTo);
       return;
     }
+    await _lookupTo(uid);
+  }
+
+  Future<void> _scanToQr() async {
+    final uid = await Navigator.push<String>(
+        context, MaterialPageRoute(builder: (_) => const QrScanScreen()));
+    if (uid == null) return;
+    setState(() => _step = _Step.busy);
+    await _lookupTo(uid);
+  }
+
+  Future<void> _lookupTo(String uid) async {
     if (uid == _fromUid) {
       setState(() {
         _msg = '不能轉給自己，請感應另一位學生的卡';
@@ -167,11 +192,20 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
           const Text('步驟 1／2：感應「轉出」學生的卡', style: TextStyle(color: AppColors.muted)),
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: _scanFrom,
+            onPressed: _scanFromNfc,
             icon: const Icon(Icons.nfc, size: 28),
             label: const Padding(
               padding: EdgeInsets.symmetric(vertical: 18, horizontal: 12),
               child: Text('掃卡（轉出方）', style: TextStyle(fontSize: 20)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _scanFromQr,
+            icon: const Icon(Icons.qr_code_scanner),
+            label: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('掃 QR 貼紙（NFC 備援）'),
             ),
           ),
         ]);
@@ -185,11 +219,20 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
           const Text('步驟 2／2：感應「轉入」學生的卡', style: TextStyle(color: AppColors.muted)),
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: _scanTo,
+            onPressed: _scanToNfc,
             icon: const Icon(Icons.nfc, size: 28),
             label: const Padding(
               padding: EdgeInsets.symmetric(vertical: 18, horizontal: 12),
               child: Text('掃卡（轉入方）', style: TextStyle(fontSize: 20)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _scanToQr,
+            icon: const Icon(Icons.qr_code_scanner),
+            label: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('掃 QR 貼紙（NFC 備援）'),
             ),
           ),
         ]);

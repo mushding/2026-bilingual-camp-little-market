@@ -3,6 +3,7 @@ import '../theme.dart';
 import '../services/api_client.dart';
 import '../services/nfc_service.dart';
 import '../widgets/amount_input_sheet.dart';
+import 'qr_scan_screen.dart';
 
 /// 賭場多步驟桌：開局 → 湊桌下注 → 封盤結算 → 結果。
 /// table = '21' | 'dice'。
@@ -63,12 +64,22 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
     }
   }
 
-  Future<void> _addPlayer() async {
+  Future<void> _addPlayerNfc() async {
     setState(() => _scanning = true);
     final uid = await NfcService.readUidOnce();
     if (mounted) setState(() => _scanning = false);
     if (uid == null) return;
+    await _addPlayer(uid);
+  }
 
+  Future<void> _addPlayerQr() async {
+    final uid = await Navigator.push<String>(
+        context, MaterialPageRoute(builder: (_) => const QrScanScreen()));
+    if (uid == null) return;
+    await _addPlayer(uid);
+  }
+
+  Future<void> _addPlayer(String uid) async {
     String betType = '21:play';
     if (_isDice) {
       final t = await showModalBottomSheet<String>(
@@ -193,25 +204,32 @@ class _CasinoTableScreenState extends State<CasinoTableScreen> {
           Row(children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _busy || _scanning || _bets.length >= 6 ? null : _addPlayer,
+                onPressed: _busy || _scanning || _bets.length >= 6 ? null : _addPlayerNfc,
                 icon: _scanning
                     ? const SizedBox(
                         width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.nfc),
                 label: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(_scanning ? '感應中…請靠近卡片' : '感應加人')),
+                    child: Text(_scanning ? '感應中…' : '感應加人')),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: FilledButton(
-                onPressed: _busy || _bets.isEmpty ? null : () => setState(() => _phase = _Phase.resolve),
-                child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12), child: Text('封盤')),
+              child: OutlinedButton.icon(
+                onPressed: _busy || _scanning || _bets.length >= 6 ? null : _addPlayerQr,
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12), child: Text('掃 QR')),
               ),
             ),
           ]),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: _busy || _bets.isEmpty ? null : () => setState(() => _phase = _Phase.resolve),
+            child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12), child: Text('封盤')),
+          ),
         ]);
       case _Phase.resolve:
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
