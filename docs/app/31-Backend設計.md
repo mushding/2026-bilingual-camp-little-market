@@ -163,7 +163,7 @@ POST /api/scan {action:guild_draw, uid, stall_id:'guild', amount:N, staff_uid}
 2. N ≥ 1？否 → ok=false「數量需 ≥ 1」。
 3. 算出 available = 9 款池扣掉目前已持有的 pending game_key；N > len(available)？是 → ok=false「最多還能抽 X 個」。
 4. **免手續費**，從 available 用 `random.sample` 抽 N 款（不重複），**累加**寫 N 筆 `guild_tasks(uid, game_key, difficulty, reward, status=pending, drawn_at)`（同一批 drawn_at 相同，不覆蓋舊任務）。
-5. message 例：`派發 2 個：投籃高手（中・獎勵60）、七巧板（高・獎勵100）　限8分`，回 StudentState + `assigned_game`。
+5. message 例：`派發 2 個：投籃高手（中・獎勵200）、七巧板（高・獎勵300）　限15分`，回 StudentState + `assigned_game`。
 
 **抽取池（9 款，均勻隨機，不重複）**
 

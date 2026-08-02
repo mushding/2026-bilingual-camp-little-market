@@ -14,19 +14,19 @@ TIER_MAP = {100: 100, 250: 300, 400: 500, 750: 1000, 1500: 2000, 3000: 4000}
 GUILD_FEE = 0                    # 免手續費（v2.3：學生指定抽幾個，關主輸入數字，一次派 N 個不重複任務）
 TASK_TIMEOUT_MIN = 15           # 每個任務限時 15 分鐘（試玩後從 8 調長，減少誤逾時）
 TASK_EXPIRE_PENALTY = 100       # 逾時扣 100（免手續費後，逾時罰款是唯一嚇阻）
-DIFFICULTY_REWARD = {"low": 30, "mid": 60, "high": 100}
+DIFFICULTY_REWARD = {"low": 100, "mid": 200, "high": 300}
 
 # 9 款小遊戲：stall_id -> (game_key, difficulty, reward)（低2/中5/高2）
 GAMES = {
-    "game_password": ("終極密碼", "low", 30),
-    "game_moving": ("搬家人工", "low", 30),
-    "game_basketball": ("投籃高手", "mid", 60),
-    "game_plane": ("丟紙飛機", "mid", 60),
-    "game_balloon": ("拍氣球", "mid", 60),
-    "game_charades": ("比手畫腳", "mid", 60),
-    "game_memory": ("記憶翻牌", "mid", 60),
-    "game_color": ("顏色分類", "high", 100),
-    "game_tangram": ("七巧板", "high", 100),
+    "game_password": ("終極密碼", "low", 100),
+    "game_moving": ("搬家人工", "low", 100),
+    "game_basketball": ("投籃高手", "mid", 200),
+    "game_plane": ("丟紙飛機", "mid", 200),
+    "game_balloon": ("拍氣球", "mid", 200),
+    "game_charades": ("比手畫腳", "mid", 200),
+    "game_memory": ("記憶翻牌", "mid", 200),
+    "game_color": ("顏色分類", "high", 300),
+    "game_tangram": ("七巧板", "high", 300),
 }
 # 公會抽取池（均勻隨機）= 上 9 個 game_key
 GUILD_POOL = list(GAMES.keys())
