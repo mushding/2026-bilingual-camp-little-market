@@ -175,6 +175,12 @@ def admin_settle_interest(req: schemas.SettleReq):
         return bank.settle_interest(s, req.day)
 
 
+@app.post("/api/admin/meal_charge_all")
+def admin_meal_charge_all(req: schemas.MealChargeAllReq):
+    with SessionLocal.begin() as s:
+        return bank.meal_charge_all(s, req.amount)
+
+
 @app.post("/api/admin/market_close")
 def admin_market_close():
     with SessionLocal.begin() as s:

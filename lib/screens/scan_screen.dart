@@ -225,8 +225,9 @@ class _ScanScreenState extends State<ScanScreen> {
         amount = v;
         break;
       case TxnType.meal:
+        // D1 下午攤位吃的／D2 午餐：攤主輸入該生消費總金額（金額不限檔）
         final v = await showAmountInput(context,
-            title: '餐費金額', quickKeys: const [150], min: 100, max: 250, hint: '預設 150');
+            title: '餐費金額', quickKeys: const [150], min: 1, hint: '輸入總金額（便當預設 150）');
         if (v == null) return;
         amount = v;
         break;

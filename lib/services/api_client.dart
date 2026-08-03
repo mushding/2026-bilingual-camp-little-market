@@ -150,6 +150,9 @@ class ApiClient {
   static Future<Map<String, dynamic>> adminSettleInterest(String day) =>
       _post('/api/admin/settle_interest', {'day': day});
 
+  static Future<Map<String, dynamic>> adminMealChargeAll(int amount) =>
+      _post('/api/admin/meal_charge_all', {'amount': amount});
+
   static Future<Map<String, dynamic>> adminMarketClose() =>
       _post('/api/admin/market_close', {});
 

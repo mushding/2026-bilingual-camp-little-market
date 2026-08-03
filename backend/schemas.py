@@ -122,6 +122,10 @@ class SettleReq(BaseModel):
     day: str
 
 
+class MealChargeAllReq(BaseModel):
+    amount: int
+
+
 class UidReq(BaseModel):
     uid: str
 

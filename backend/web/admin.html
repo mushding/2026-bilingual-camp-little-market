@@ -134,6 +134,14 @@
       </div>
     </div>
     <div class="card">
+      <h3>全體扣餐費 meal_charge_all（D2 晚餐 / D3 午餐）</h3>
+      <p>不擺攤的餐：輸入單價，所有已綁卡學員一次統一扣。餘額不足者只扣到 0（餐照供）。</p>
+      <div class="row">
+        <input id="mealAmt" type="number" min="1" placeholder="每人扣多少（例 100）" style="width:180px">
+        <button class="warn" onclick="mealChargeAll()">🍱 全體扣餐費</button>
+      </div>
+    </div>
+    <div class="card">
       <h3>市場關閉 market_close（D3 突襲，不可逆）</h3>
       <p>所有未兌換現金＋定存本利 ×0.1（銷毀 90%），市場凍結，凍結名次。只按一次。</p>
       <button class="warn" onclick="confirmRun('🔒 市場關閉？銷毀 90% 現金、凍結市場，不可逆','/api/admin/market_close')">🔒 市場關閉</button>
@@ -491,6 +499,17 @@ async function runSimple(path, label) {
     const r = await api(path, { method: 'POST' });
     await poll();
     toast(r.ok === false ? (r.message || label + '失敗') : label + '完成', r.ok === false);
+  } catch (e) { toast(e.message, true); }
+}
+async function mealChargeAll() {
+  const amt = parseInt($('#mealAmt').value, 10);
+  if (!amt || amt <= 0) { toast('請輸入金額', true); return; }
+  if (!confirm(`🍱 全體扣餐費？所有已綁卡學員每人扣 $${amt}，餘額不足者只扣到 0。\n\n確定執行？`)) return;
+  try {
+    const r = await api('/api/admin/meal_charge_all', post({ amount: amt }));
+    await poll();
+    toast(r.message || '完成', r.ok === false);
+    $('#mealAmt').value = '';
   } catch (e) { toast(e.message, true); }
 }
 async function revoke() {

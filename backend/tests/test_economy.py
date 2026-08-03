@@ -119,6 +119,25 @@ def test_market_close_x01():
     assert scan(uid="G", stall_id="grocery", action="debit", amount=1)["ok"] is False
 
 
+def test_meal_charge_all():
+    fresh_state()
+    with S.begin() as s:  # 清掉其他測試留下的學員（bulk 扣全體，需乾淨名單）
+        s.query(models.Student).delete()
+    add_student("M1", 500)
+    add_student("M2", 60)   # 不足，只扣到 0
+    add_student("M3", 0)    # 沒錢，跳過但列入不足
+    with S.begin() as s:
+        r = bank.meal_charge_all(s, 100)
+    assert r["ok"] is True and r["count"] == 2 and r["total"] == 160 and r["short"] == 2
+    with S.begin() as s:
+        assert s.get(models.Student, "M1").balance == 400
+        assert s.get(models.Student, "M2").balance == 0
+        assert s.get(models.Student, "M3").balance == 0
+    with S.begin() as s:
+        bad = bank.meal_charge_all(s, 0)
+    assert bad["ok"] is False
+
+
 def test_dice_seven_payout():
     fresh_state(); add_student("H", 500)
     with S.begin() as s:

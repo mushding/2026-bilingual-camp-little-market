@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../services/api_client.dart';
 import '../services/nfc_service.dart';
 import 'roster_bind_screen.dart';
+import '../widgets/amount_input_sheet.dart';
 
 /// 總控管理畫面 — 換日 / 結息 / 市場關閉。皆二次確認、不可逆。
 class AdminScreen extends StatefulWidget {
@@ -159,6 +160,30 @@ class _AdminScreenState extends State<AdminScreen> {
                   child: Text('結息 $d'),
                 ),
           ]),
+          const Divider(height: 32),
+          const Text('全體扣餐費 meal_charge_all（D2晚餐/D3午餐）', style: _h),
+          const Text('不擺攤的餐：輸入單價，所有已綁卡學員一次統一扣。餘額不足者只扣到 0（餐照供）。',
+              style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          const SizedBox(height: 8),
+          FilledButton.tonal(
+            onPressed: _busy
+                ? null
+                : () async {
+                    final v = await showAmountInput(context,
+                        title: '全體扣餐費 — 每人扣多少？',
+                        quickKeys: const [100, 150, 200],
+                        min: 1,
+                        hint: '例：100 → 全部人各扣 100');
+                    if (v == null || !mounted) return;
+                    if (await _confirm('全體扣餐費', '所有已綁卡學員每人扣 \$$v？\n餘額不足者只扣到 0。')) {
+                      await _run(() => ApiClient.adminMealChargeAll(v), '全體扣餐費');
+                    }
+                  },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Text('🍱 全體扣餐費', style: TextStyle(fontSize: 16)),
+            ),
+          ),
           const Divider(height: 32),
           const Text('每日場控（截止/開市/5分鐘提醒）', style: _h),
           const Text('每場結束按「當日截止」凍結交易（學生才停得下來）；換日或按「重新開市」恢復。'

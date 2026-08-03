@@ -109,6 +109,31 @@ def transfer(session, from_uid: str, to_uid: str, amount: int) -> dict:
             "to": {"uid": dst.uid, "name": dst.name, "balance": dst.balance}, "amount": amount}
 
 
+def meal_charge_all(session, amount: int) -> dict:
+    """全體扣餐費（D2 晚餐／D3 午餐不擺攤，總控輸入單價一鍵統一扣）。
+    只扣已綁卡學員；餘額不足者扣到 0（餐照供，保證水槽——不是沒錢就沒飯）。
+    不檢查 market_open：通常在當日截止後才收餐費，屬總控權限。"""
+    if amount <= 0:
+        return {"ok": False, "message": "金額需 > 0"}
+    st = get_state(session)
+    count, total, short = 0, 0, 0
+    for s in session.scalars(select(Student).where(Student.card_uid.is_not(None))):
+        charged = min(amount, s.balance)
+        if charged < amount:
+            short += 1
+        if charged <= 0:
+            continue
+        s.balance -= charged
+        write_txn(session, s, "meal", "meal", -charged, st.current_day,
+                  {"bulk": True, "asked": amount})
+        count += 1
+        total += charged
+    msg = f"全體扣餐費 ${amount}：{count} 人共扣 ${total}"
+    if short:
+        msg += f"（{short} 人餘額不足，只扣到 0）"
+    return {"ok": True, "message": msg, "count": count, "total": total, "short": short}
+
+
 def market_close(session) -> dict:
     """D3 10:25 突襲。未兌換現金 + 定存本利 ×0.1 計入積分，歸零，鎖市場。"""
     st = get_state(session)
