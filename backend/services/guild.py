@@ -11,7 +11,8 @@ from datetime import datetime, timezone
 
 from sqlalchemy import select
 
-from constants import (GAMES, GUILD_POOL, TASK_EXPIRE_PENALTY, TASK_TIMEOUT_MIN)
+from constants import (GAMES, GUILD_POOL, GUILD_WEIGHT_DEFAULT, GUILD_WEIGHTS,
+                       TASK_EXPIRE_PENALTY, TASK_TIMEOUT_MIN)
 from models import GameState, GuildTask, Student
 from schemas import StudentState
 from services.txn import lock_student, now_iso, state_to_out, write_txn
@@ -40,6 +41,19 @@ def sweep_expired(session, s: Student, day: str) -> int:
     return expired
 
 
+def _weighted_sample(pool: list[str], k: int) -> list[str]:
+    """加權不重複抽 k 款：一對一難 scale 的關權重 1、其餘 2（constants.GUILD_WEIGHTS）。
+    逐一抽出後從池移除（等同加權版 random.sample）。"""
+    pool = list(pool)
+    out = []
+    for _ in range(k):
+        weights = [GUILD_WEIGHTS.get(g, GUILD_WEIGHT_DEFAULT) for g in pool]
+        g = random.choices(pool, weights=weights, k=1)[0]
+        pool.remove(g)
+        out.append(g)
+    return out
+
+
 def draw(session, s: Student, day: str, count: int) -> StudentState:
     """guild_draw：免手續費，一次派 count 個不重複任務（扣掉手上已持有的）。s 已鎖。"""
     if count < 1:
@@ -51,7 +65,7 @@ def draw(session, s: Student, day: str, count: int) -> StudentState:
         return state_to_out(
             s, "guild", "guild_draw",
             f"最多還能抽 {len(available)} 個（已持有 {len(held)} 個不重複任務）", ok=False)
-    assigned = random.sample(available, count)
+    assigned = _weighted_sample(available, count)
     names = []
     for game_key in assigned:
         name, difficulty, reward = GAMES[game_key]

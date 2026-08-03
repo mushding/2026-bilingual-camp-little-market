@@ -168,6 +168,24 @@ def test_guild_draw_no_duplicates_and_pool_cap():
     assert r2["ok"] is False and r2["balance"] == 2000
 
 
+def test_guild_weighted_draw():
+    from constants import GUILD_POOL, GUILD_WEIGHTS
+    from services.guild import _weighted_sample
+    # 抽滿整池仍不重複
+    full = _weighted_sample(GUILD_POOL, len(GUILD_POOL))
+    assert sorted(full) == sorted(GUILD_POOL)
+    # 統計：權重 2 的關抽中率應明顯高於權重 1（單抽 2/15 vs 1/15）
+    import random
+    random.seed(42)
+    hits = {g: 0 for g in GUILD_POOL}
+    for _ in range(6000):
+        hits[_weighted_sample(GUILD_POOL, 1)[0]] += 1
+    for g1 in GUILD_WEIGHTS:            # 權重 1：期望 6000/15=400
+        assert 280 < hits[g1] < 520, (g1, hits[g1])
+    for g2 in set(GUILD_POOL) - set(GUILD_WEIGHTS):  # 權重 2：期望 800
+        assert 650 < hits[g2] < 950, (g2, hits[g2])
+
+
 def test_guild_task_timeout_penalty():
     import models
     from datetime import datetime, timedelta, timezone

@@ -165,7 +165,7 @@ POST /api/scan {action:guild_draw, uid, stall_id:'guild', amount:N, staff_uid}
 4. **免手續費**，從 available 用 `random.sample` 抽 N 款（不重複），**累加**寫 N 筆 `guild_tasks(uid, game_key, difficulty, reward, status=pending, drawn_at)`（同一批 drawn_at 相同，不覆蓋舊任務）。
 5. message 例：`派發 2 個：疊杯子（中・獎勵200）、七巧板（高・獎勵300）　限15分`，回 StudentState + `assigned_game`。
 
-**抽取池（9 款，均勻隨機，不重複）**
+**抽取池（9 款，加權隨機，不重複；終極密碼/比手畫腳/記憶翻牌權重 1、其餘 2）**
 
 | 難度 | 固定獎勵 | 款數 | 遊戲 |
 |---|---|---|---|
