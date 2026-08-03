@@ -82,7 +82,6 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Future<void> _pollMarket() async {
-    if (!Settings.instance.enrolled) return;
     try {
       final st = await ApiClient.appState();
       if (!mounted) return;

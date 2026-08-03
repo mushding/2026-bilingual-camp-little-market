@@ -34,7 +34,8 @@ ADMIN_PREFIXES = ("/api/admin/", "/api/report")
 
 @app.middleware("http")
 async def require_token(request: Request, call_next):
-    """Bearer token 驗證。/health 與 /api/auth/enroll 免驗；/api/admin/* 與報表需 admin。"""
+    """一般操作免註冊（預設 staff scope）；/api/admin/* 與報表仍需 admin Bearer token。
+    /health 與 /api/auth/enroll 免驗。"""
     path = request.url.path
     # 後台 Web UI 外殼（HTML，瀏覽器直開、無 header）免驗；其 API 呼叫仍帶 Bearer。
     if path in ("/health", "/admin", "/ledger") or path.startswith("/api/auth/enroll"):
@@ -42,10 +43,12 @@ async def require_token(request: Request, call_next):
 
     hdr = request.headers.get("authorization", "")
     token = hdr[7:] if hdr.lower().startswith("bearer ") else ""
-    with ReadSessionLocal() as s:
-        scope = auth.verify(s, token)
-    if scope is None:
-        return JSONResponse({"ok": False, "message": "未授權（請重新註冊裝置）"}, status_code=401)
+    scope = "staff"
+    if token:
+        with ReadSessionLocal() as s:
+            verified = auth.verify(s, token)
+        if verified:
+            scope = verified
     if any(path.startswith(p) for p in ADMIN_PREFIXES) and scope != "admin":
         return JSONResponse({"ok": False, "message": "需總控權限"}, status_code=403)
     return await call_next(request)

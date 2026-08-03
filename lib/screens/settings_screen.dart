@@ -24,7 +24,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadDay() async {
-    if (!Settings.instance.enrolled) return;  // 未註冊無法呼叫 API
     try {
       final st = await ApiClient.appState();
       if (mounted) setState(() => _day = st['current_day'] ?? '');
@@ -83,26 +82,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            // ── 裝置註冊 ──
+            // ── 總控註冊（一般關主免註冊，直接用；只有要看管理畫面才需要）──
             Card(
-              color: s.enrolled ? AppColors.mint : AppColors.yellow,
+              color: s.enrolled ? AppColors.mint : AppColors.paper,
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
-                    Icon(s.enrolled ? Icons.verified_user : Icons.gpp_maybe),
+                    Icon(s.enrolled ? Icons.verified_user : Icons.info_outline),
                     const SizedBox(width: 8),
-                    Text(s.enrolled ? '已註冊（權限：${s.scope}）' : '尚未註冊裝置',
+                    Text(s.enrolled ? '已註冊總控（權限：${s.scope}）' : '一般關主：免註冊，可直接使用',
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ]),
+                  const SizedBox(height: 4),
+                  const Text('只有總控管理畫面需要下面這組設定碼；平常掃卡記帳不用輸入。',
+                      style: TextStyle(fontSize: 12, color: AppColors.muted)),
                   const SizedBox(height: 8),
                   if (!s.enrolled) ...[
                     TextField(
                       controller: _code,
                       autocorrect: false,
                       decoration: const InputDecoration(
-                        labelText: '設定碼（總控發給你）',
-                        hintText: 'FYstaff-... / FYadmin-...',
+                        labelText: '總控設定碼（要看管理畫面才需要）',
+                        hintText: 'FYadmin-...',
                         border: OutlineInputBorder(),
                         filled: true,
                       ),
@@ -111,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     FilledButton.icon(
                       onPressed: _enrolling ? null : _enroll,
                       icon: const Icon(Icons.key),
-                      label: Text(_enrolling ? '註冊中…' : '註冊此裝置'),
+                      label: Text(_enrolling ? '註冊中…' : '註冊為總控'),
                     ),
                   ] else
                     OutlinedButton.icon(

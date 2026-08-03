@@ -292,22 +292,20 @@ def test_reset_all():
 
 
 def test_auth_enroll_verify_revoke():
+    """只有 admin 需要註冊；一般 staff 操作免設定碼（見 app.py middleware 預設 scope）。"""
     import auth
     with S.begin() as s:
         bad = auth.enroll(s, "wrong-code")
         assert bad["ok"] is False
         a = auth.enroll(s, "dev-admin-code", "總控機")
-        st = auth.enroll(s, "dev-staff-code", "銀行攤")
-    assert a["scope"] == "admin" and st["scope"] == "staff"
+    assert a["scope"] == "admin"
     with S.begin() as s:
         assert auth.verify(s, a["token"]) == "admin"
-        assert auth.verify(s, st["token"]) == "staff"
         assert auth.verify(s, "garbage") is None
     with S.begin() as s:
-        auth.revoke(s, label="銀行攤")
+        auth.revoke(s, label="總控機")
     with S.begin() as s:
-        assert auth.verify(s, st["token"]) is None   # 撤銷後失效
-        assert auth.verify(s, a["token"]) == "admin"  # 其他不受影響
+        assert auth.verify(s, a["token"]) is None   # 撤銷後失效
 
 
 if __name__ == "__main__":

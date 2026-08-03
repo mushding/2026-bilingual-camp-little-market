@@ -5,6 +5,17 @@
 
 ---
 
+## v2.6（2026-08-04）移除 staff 註冊碼，只留 admin
+
+| 項目 | 前值 | 現值（v2.6） | 原因 |
+|---|---|---|---|
+| 一般關主驗證 | 需 `ENROLL_STAFF_CODE` 註冊裝置才能用 App | **免註冊**，middleware 無 Bearer 時預設 `staff` scope，開 App 選攤位即可用 | internal 工具、無對外惡意使用威脅模型，多一道設定碼只是現場摩擦 |
+| 總控驗證 | `ENROLL_ADMIN_CODE` | 不變，仍需註冊才看得到管理畫面 | admin 操作（reset/市場關閉等）不可逆，保留門檻 |
+
+> `ENROLL_STAFF_CODE` 已從 `auth.py`、deploy workflow、docs 全數移除；GitHub secret 本身沒動（不影響，未被引用）。App 設定畫面文案同步改為「一般關主：免註冊，可直接使用」。
+
+---
+
 ## v2.5（2026-08-02）公會難度獎勵全面上調 + 娃娃改四檔降價
 
 | 項目 | 前值（v2.3–v2.4） | 現值（v2.5） | 原因 |
