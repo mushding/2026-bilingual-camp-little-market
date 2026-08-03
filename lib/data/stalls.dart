@@ -19,7 +19,7 @@ const _games = {
   'game_color': '顏色分類',
   'game_password': '終極密碼',
   'game_moving': '搬家人工',
-  'game_basketball': '投籃高手',
+  'game_basketball': '疊杯子',
   'game_plane': '丟紙飛機',
   'game_balloon': '拍氣球',
   'game_charades': '比手畫腳',

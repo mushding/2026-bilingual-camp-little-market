@@ -37,7 +37,7 @@ STALL_NAMES = {
     "grocery": "雜貨店", "mail": "郵政", "casino_21": "玩 10點半遊戲",
     "casino_dice": "玩 骰子遊戲", "guild": "公會台",
     "game_color": "顏色分類", "game_password": "終極密碼", "game_moving": "搬家人工",
-    "game_basketball": "投籃高手", "game_plane": "丟紙飛機", "game_balloon": "拍氣球",
+    "game_basketball": "疊杯子", "game_plane": "丟紙飛機", "game_balloon": "拍氣球",
     "game_charades": "比手畫腳", "game_memory": "記憶翻牌", "game_tangram": "七巧板",
     "topic1": "主題一：大地遊戲", "system": "系統",
 }

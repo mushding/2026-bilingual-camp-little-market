@@ -20,7 +20,7 @@ DIFFICULTY_REWARD = {"low": 100, "mid": 200, "high": 300}
 GAMES = {
     "game_password": ("終極密碼", "low", 100),
     "game_moving": ("搬家人工", "low", 100),
-    "game_basketball": ("投籃高手", "mid", 200),
+    "game_basketball": ("疊杯子", "mid", 200),
     "game_plane": ("丟紙飛機", "mid", 200),
     "game_balloon": ("拍氣球", "mid", 200),
     "game_charades": ("比手畫腳", "mid", 200),
