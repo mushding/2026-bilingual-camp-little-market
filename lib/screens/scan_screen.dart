@@ -355,13 +355,13 @@ class _ScanScreenState extends State<ScanScreen> {
         ),
       );
 
-  /// 賣娃娃固定四檔：特大500／大300／中200／小100。
+  /// 賣娃娃固定三檔：大500／中300／小100。
   Future<int?> _pickDollPrice() => showDialog<int>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('賣娃娃 — 選尺寸'),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            for (final e in const {'特大': 500, '大': 300, '中': 200, '小': 100}.entries)
+            for (final e in const {'大': 500, '中': 300, '小': 100}.entries)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: SizedBox(

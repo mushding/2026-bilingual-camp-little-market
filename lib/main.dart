@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/scan_screen.dart';
+import 'screens/home_screen.dart';
 import 'services/settings.dart';
 import 'theme.dart';
 
@@ -15,10 +15,10 @@ class FlyyoungApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '小市集 · 攤主端',
+      title: '2026 雙語營',
       debugShowCheckedModeBanner: false,
       theme: buildIslandTheme(),
-      home: const ScanScreen(),
+      home: const HomeScreen(),
     );
   }
 }

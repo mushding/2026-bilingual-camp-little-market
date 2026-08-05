@@ -1,7 +1,7 @@
 name: flyyoung_app
 description: 小市集營會 攤主端 — NTAG 掃卡 → backend（Android / iOS）
 publish_to: 'none'
-version: 1.0.1+17
+version: 1.0.1+22
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -28,6 +28,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sounds/scan_success.mp3
+    - assets/maps/
   fonts:
     - family: Huninn
       fonts:
