@@ -5,6 +5,18 @@
 
 ---
 
+## v2.7（2026-08-05）定存改 tick 制複利 + admin 定存頁
+
+| 項目 | 前值 | 現值（v2.7） | 原因 |
+|---|---|---|---|
+| 定存利息 | 20%/場，每場末手動結一次，上限 3 次（最大 +72.8%） | **3% / 每 10 分鐘自動複利 tick**（市場開放時才跳），150 分可玩時間 → 最多 15 tick（最大 **+55.8%**） | 存越久賺越多才貼合才幹比喻；舊制「結算前塞錢拿滿 20%」可被 game；刻意讓定存略弱於舊制（+55.8% vs +72.8%），rate 可再調 |
+| 利率/間隔設定 | 寫死在 `constants.py` | 存 `game_state`（`interest_rate_pct`/`interest_tick_min`），**admin panel 新增「💰 定存」頁**即時可調，並有每人定存/利息收入動態 dashboard（3 秒自動更新） | 營期中發現太強/太弱可現場調，不用改 code 重佈 |
+| 結息執行 | admin 手動按「結息」 | backend scheduler（15 秒輪詢，`bank.interest_tick` 自帶節流；關市滑動基準、重開市重新起算完整 tick） | 自動化；手動 `settle_interest` 保留當緊急備援 |
+
+> 新 API：`GET/POST /api/admin/interest/config`、`GET /api/admin/interest/dashboard`。利息交易 action=`interest_tick`（legacy 手動結息仍是 `interest`，dashboard 兩者都算）。
+
+---
+
 ## v2.6（2026-08-04）移除 staff 註冊碼，只留 admin
 
 | 項目 | 前值 | 現值（v2.6） | 原因 |

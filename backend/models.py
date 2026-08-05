@@ -1,5 +1,5 @@
 """ORM models — 對應 docs/app/32 §1。"""
-from sqlalchemy import Integer, String, Text, UniqueConstraint
+from sqlalchemy import Float, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db import Base
@@ -105,3 +105,8 @@ class GameState(Base):
     settled_days: Mapped[str] = mapped_column(Text, default="[]")  # JSON list
     closing_soon: Mapped[int] = mapped_column(Integer, default=0)  # 5分鐘提醒廣播（App 輪詢顯示）
     final_closed: Mapped[int] = mapped_column(Integer, default=0)  # D3 最終關市（×0.1、不可逆）
+    # 定存 tick 制（v2.7）— admin 定存頁可調
+    interest_rate_pct: Mapped[float] = mapped_column(Float, default=3.0)
+    interest_tick_min: Mapped[int] = mapped_column(Integer, default=10)
+    interest_last_tick: Mapped[str] = mapped_column(String, default="")
+    interest_tick_count: Mapped[int] = mapped_column(Integer, default=0)

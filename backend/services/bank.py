@@ -77,6 +77,99 @@ def settle_interest(session, day: str) -> dict:
             "settlement_count": st.settlement_count}
 
 
+def interest_config(session) -> dict:
+    """定存 tick 設定與狀態（admin 定存頁）。"""
+    st = get_state(session)
+    return {"ok": True, "rate_pct": st.interest_rate_pct,
+            "tick_min": st.interest_tick_min,
+            "tick_count": st.interest_tick_count,
+            "last_tick": st.interest_last_tick,
+            "market_open": bool(st.market_open),
+            "final_closed": bool(st.final_closed)}
+
+
+def set_interest_config(session, rate_pct: float, tick_min: int) -> dict:
+    if not 0 <= rate_pct <= 100:
+        return {"ok": False, "message": "rate_pct 需 0–100"}
+    if not 1 <= tick_min <= 120:
+        return {"ok": False, "message": "tick_min 需 1–120"}
+    st = get_state(session)
+    st.interest_rate_pct = float(rate_pct)
+    st.interest_tick_min = int(tick_min)
+    return {"ok": True, "rate_pct": st.interest_rate_pct, "tick_min": st.interest_tick_min}
+
+
+def interest_tick(session, force: bool = False) -> dict:
+    """定存 tick（v2.7）：市場開放時每 tick_min 分鐘對所有定存 +rate_pct%（捨去整數）。
+    scheduler 高頻呼叫，未到時間 no-op。市場關閉時滑動 last_tick 基準——重開市後
+    要再等滿一個完整 tick 才會發息，關市期間不累積。"""
+    st = get_state(session)
+    now = datetime.now(timezone.utc)
+    now_s = now.isoformat(timespec="seconds")
+    if st.market_open != 1 or st.final_closed:
+        st.interest_last_tick = now_s
+        return {"ok": True, "ticked": False, "reason": "market_closed"}
+    last = None
+    if st.interest_last_tick:
+        try:
+            last = datetime.fromisoformat(st.interest_last_tick)
+        except ValueError:
+            last = None
+    if last is None:
+        st.interest_last_tick = now_s
+        return {"ok": True, "ticked": False, "reason": "baseline"}
+    if not force and (now - last).total_seconds() < st.interest_tick_min * 60:
+        return {"ok": True, "ticked": False, "reason": "not_due"}
+    rate = st.interest_rate_pct / 100.0
+    count = total = 0
+    for s in session.scalars(select(Student).where(Student.deposit_balance > 0)):
+        interest = math.floor(s.deposit_balance * rate)
+        if interest <= 0:
+            continue
+        s.deposit_balance += interest
+        write_txn(session, s, "bank", "interest_tick", interest, st.current_day,
+                  {"rate_pct": st.interest_rate_pct, "tick": st.interest_tick_count + 1})
+        count += 1
+        total += interest
+    st.interest_last_tick = now_s
+    st.interest_tick_count += 1
+    return {"ok": True, "ticked": True, "tick": st.interest_tick_count,
+            "students": count, "total_interest": total}
+
+
+def interest_dashboard(session) -> dict:
+    """定存動態 dashboard：每人目前定存 + 歷來利息收入（含 legacy 手動結息）。"""
+    from sqlalchemy import func
+    st = get_state(session)
+    earned = dict(session.execute(
+        select(Transaction.uid, func.sum(Transaction.amount))
+        .where(Transaction.stall_id == "bank",
+               Transaction.action.in_(("interest", "interest_tick")))
+        .group_by(Transaction.uid)).all())
+    rows = []
+    for s in session.scalars(select(Student).where(Student.card_uid.is_not(None))):
+        e = int(earned.get(s.uid) or 0)
+        if s.deposit_balance <= 0 and e <= 0:
+            continue
+        rows.append({"uid": s.uid, "name": s.name, "group": s.group or "",
+                     "deposit": s.deposit_balance, "earned": e})
+    rows.sort(key=lambda r: (-r["earned"], -r["deposit"]))
+    next_tick_sec = None
+    if st.market_open == 1 and not st.final_closed and st.interest_last_tick:
+        try:
+            last = datetime.fromisoformat(st.interest_last_tick)
+            next_tick_sec = max(0, int(st.interest_tick_min * 60 -
+                                       (datetime.now(timezone.utc) - last).total_seconds()))
+        except ValueError:
+            pass
+    return {"ok": True, "rate_pct": st.interest_rate_pct,
+            "tick_min": st.interest_tick_min, "tick_count": st.interest_tick_count,
+            "market_open": bool(st.market_open), "final_closed": bool(st.final_closed),
+            "next_tick_sec": next_tick_sec,
+            "total_deposit": sum(r["deposit"] for r in rows),
+            "total_earned": sum(r["earned"] for r in rows), "rows": rows}
+
+
 def transfer(session, from_uid: str, to_uid: str, amount: int) -> dict:
     """服務三：兩學生一起找銀行，指定把錢從 A 轉到 B。無手續費、無金額上限。
     A（轉出方）金額 1:1 轉天國點數 + 0.5x 轉積分，算在 A 頭上（docx v2.3；積分

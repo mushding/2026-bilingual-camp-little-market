@@ -67,6 +67,15 @@ def init_db():
                     f"ALTER TABLE game_state ADD COLUMN {col} INTEGER DEFAULT 0")
             except Exception:
                 pass
+        for col, ddl in (("interest_rate_pct", "REAL DEFAULT 3.0"),
+                         ("interest_tick_min", "INTEGER DEFAULT 10"),
+                         ("interest_last_tick", "TEXT DEFAULT ''"),
+                         ("interest_tick_count", "INTEGER DEFAULT 0")):
+            try:
+                conn.exec_driver_sql(
+                    f"ALTER TABLE game_state ADD COLUMN {col} {ddl}")
+            except Exception:
+                pass
     # 確保 game_state 單列存在
     with SessionLocal.begin() as s:
         if s.get(models.GameState, 1) is None:

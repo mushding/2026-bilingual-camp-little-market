@@ -93,6 +93,7 @@
 <nav>
   <button data-tab="dash" class="active" onclick="showTab('dash')">📊 即時總覽</button>
   <button data-tab="admin" onclick="showTab('admin')">⚙️ 總控操作</button>
+  <button data-tab="interest" onclick="showTab('interest')">💰 定存</button>
   <button data-tab="roster" onclick="showTab('roster')">🪪 綁卡名單</button>
   <button data-tab="report" onclick="showTab('report')">📄 成績單</button>
   <button data-tab="awards" onclick="showTab('awards')">🏆 頒獎</button>
@@ -170,6 +171,23 @@
       </div>
     </div>
     <p class="muted">註：讀卡 UID 需 NFC，僅手機 App 可用，電腦後台不提供。</p>
+  </section>
+
+  <section id="interest" class="panel">
+    <div class="grid" id="intStats"></div>
+    <div class="card">
+      <h3>Tick 設定</h3>
+      <p>市場開放時，每 tick 分鐘對所有定存複利一次（利息無條件捨去到整數）。改設定立即生效；市場關閉時不跳息、重開後重新起算一個完整 tick。</p>
+      <div class="row">
+        <label>利率 % <input id="intRate" type="number" step="0.5" min="0" max="100" style="width:90px"></label>
+        <label>Tick 分鐘 <input id="intTick" type="number" min="1" max="120" style="width:90px"></label>
+        <button onclick="saveInterestCfg()">儲存設定</button>
+      </div>
+    </div>
+    <div class="row"><span class="muted">每 3 秒自動更新；依利息收入排序</span></div>
+    <div class="tblwrap"><table id="intTbl"><thead>
+      <tr><th>姓名</th><th>小組</th><th class="num">定存餘額</th><th class="num">利息累積</th></tr>
+    </thead><tbody></tbody></table></div>
   </section>
 
   <section id="roster" class="panel">
@@ -359,6 +377,44 @@ function showTab(t) {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
   if (t === 'roster') loadRoster();
   if (t === 'awards') loadAwards();
+  if (intTimer) { clearInterval(intTimer); intTimer = null; }
+  if (t === 'interest') { loadInterest(); intTimer = setInterval(loadInterest, 3000); }
+}
+
+// ── 定存 ──
+let intTimer = null;
+
+async function loadInterest() {
+  try {
+    const d = await api('/api/admin/interest/dashboard');
+    const nextTick = d.final_closed ? '已最終關市'
+      : !d.market_open ? '市場關閉（暫停跳息）'
+      : d.next_tick_sec == null ? '—'
+      : d.next_tick_sec + ' 秒';
+    $('#intStats').innerHTML = [
+      ['利率 / tick', d.rate_pct + '% / ' + d.tick_min + ' 分'],
+      ['已跳 tick', d.tick_count], ['下次跳息', nextTick],
+      ['定存總額', d.total_deposit], ['利息總發放', d.total_earned],
+    ].map(([l, v]) => `<div class="stat"><div class="l">${l}</div><div class="v num">${escapeHtml(v)}</div></div>`).join('');
+    if (document.activeElement !== $('#intRate') && document.activeElement !== $('#intTick')) {
+      $('#intRate').value = d.rate_pct; $('#intTick').value = d.tick_min;
+    }
+    $('#intTbl tbody').innerHTML = d.rows.map(r =>
+      `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.group)}</td>
+       <td class="num">${r.deposit}</td><td class="num">+${r.earned}</td></tr>`).join('')
+      || '<tr><td colspan="4" class="muted">目前沒有定存、也還沒發過利息</td></tr>';
+  } catch (e) { toast(e.message, true); }
+}
+
+async function saveInterestCfg() {
+  try {
+    const r = await api('/api/admin/interest/config', post({
+      rate_pct: parseFloat($('#intRate').value),
+      tick_min: parseInt($('#intTick').value, 10),
+    }));
+    toast(`已更新：${r.rate_pct}% / ${r.tick_min} 分`);
+    loadInterest();
+  } catch (e) { toast(e.message, true); }
 }
 
 // ── 綁卡名單 ──

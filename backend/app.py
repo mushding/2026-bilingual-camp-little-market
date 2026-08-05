@@ -4,6 +4,8 @@
     uvicorn app:app --host 0.0.0.0 --port 8000
 所有寫入走 SessionLocal.begin() 單一 transaction（原子）。
 """
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 import os
@@ -20,10 +22,23 @@ from services import bank, casino, guild, report, roster, topic1
 from services.txn import handle_scan
 
 
+async def _interest_loop():
+    """定存 tick scheduler：每 15 秒檢查一次，到點才真正發息（bank.interest_tick 自帶節流）。"""
+    while True:
+        try:
+            with SessionLocal.begin() as s:
+                bank.interest_tick(s)
+        except Exception:  # noqa: BLE001 — tick 失敗不能砸掉整個 loop
+            logging.exception("interest tick failed")
+        await asyncio.sleep(15)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
+    tick_task = asyncio.create_task(_interest_loop())
     yield
+    tick_task.cancel()
 
 
 app = FastAPI(title="小市集 Backend v1.0", lifespan=lifespan)
@@ -176,6 +191,24 @@ def admin_set_day(req: schemas.DayReq):
 def admin_settle_interest(req: schemas.SettleReq):
     with SessionLocal.begin() as s:
         return bank.settle_interest(s, req.day)
+
+
+@app.get("/api/admin/interest/config")
+def admin_interest_config():
+    with ReadSessionLocal() as s:
+        return bank.interest_config(s)
+
+
+@app.post("/api/admin/interest/config")
+def admin_interest_set_config(req: schemas.InterestConfigReq):
+    with SessionLocal.begin() as s:
+        return bank.set_interest_config(s, req.rate_pct, req.tick_min)
+
+
+@app.get("/api/admin/interest/dashboard")
+def admin_interest_dashboard():
+    with ReadSessionLocal() as s:
+        return bank.interest_dashboard(s)
 
 
 @app.post("/api/admin/meal_charge_all")

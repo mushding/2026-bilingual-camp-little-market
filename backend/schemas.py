@@ -122,6 +122,11 @@ class SettleReq(BaseModel):
     day: str
 
 
+class InterestConfigReq(BaseModel):
+    rate_pct: float
+    tick_min: int
+
+
 class MealChargeAllReq(BaseModel):
     amount: int
 

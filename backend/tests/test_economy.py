@@ -106,6 +106,29 @@ def test_deposit_interest_compound():
         assert s.get(models.Student, "F").deposit_balance == 172
 
 
+def test_interest_tick():
+    # 注意：測試共用同一顆 in-memory DB，前面測試的學生若還有定存也會被 tick 到，
+    # 所以只對 IT 一人斷言，不看全體 total。
+    fresh_state(day="D1"); add_student("IT", 500)
+    scan(uid="IT", stall_id="bank", action="deposit", amount=200)
+    with S.begin() as s:
+        assert bank.interest_tick(s)["ticked"] is False   # 首呼叫只設基準
+        assert bank.interest_tick(s, force=True)["ticked"] is True  # 預設 3%
+    with S.begin() as s:
+        assert s.get(models.Student, "IT").deposit_balance == 206  # floor(200*1.03)
+    with S.begin() as s:                                  # 可調 config
+        assert bank.set_interest_config(s, 4.0, 5)["ok"] is True
+        bank.interest_tick(s, force=True)
+    with S.begin() as s:
+        assert s.get(models.Student, "IT").deposit_balance == 214  # 206+floor(206*0.04)
+    with S.begin() as s:                                  # 市場關閉不跳息
+        bank.day_close(s)
+        assert bank.interest_tick(s, force=True)["ticked"] is False
+    with S.begin() as s:
+        row = next(r for r in bank.interest_dashboard(s)["rows"] if r["uid"] == "IT")
+        assert row["earned"] == 14 and row["deposit"] == 214
+
+
 def test_market_close_x01():
     fresh_state(day="D3"); add_student("G", 500)
     scan(uid="G", stall_id="bank", action="deposit", amount=100)  # bal 400, dep 100

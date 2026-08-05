@@ -41,9 +41,14 @@ GUILD_WEIGHT_DEFAULT = 2
 GAME_KEY_TO_STALL = {v[0]: k for k, v in GAMES.items()}
 
 # 銀行
-DEPOSIT_RATE = 0.2          # 20%/天，複利
+DEPOSIT_RATE = 0.2          # 20%/天，複利（legacy 手動結息備援，v2.7 起主要走 tick 制）
 MAX_SETTLEMENTS = 3
 MARKET_CLOSE_RATE = 0.1     # 未兌換現金 + 定存本利 ×0.1
+
+# 定存 tick 制（v2.7）：市場開放時每 tick_min 分鐘對定存複利 rate_pct%。
+# 這裡只是 DB 初始預設；實際值存 game_state，admin panel 定存頁可調。
+DEFAULT_INTEREST_RATE_PCT = 3.0
+DEFAULT_INTEREST_TICK_MIN = 10
 
 # 餐費（真實台幣物價，不隨遊戲幣縮放）
 MEAL_DEFAULT = 150
@@ -59,8 +64,8 @@ WITNESS_KP = 100
 BET_MIN, BET_MAX = 10, 100
 DICE_PAYOUT = {"big": 2, "small": 2, "seven": 5}  # 命中 balance += amount × payout（含退本金）
 
-# Day1 賣娃娃固定四檔
-DOLL_PRICES = {"特大": 500, "大": 300, "中": 200, "小": 100}
+# Day1 賣娃娃固定三檔
+DOLL_PRICES = {"大": 500, "中": 300, "小": 100}
 
 # 起始金（才幹 5/2/1，非隨機：每組固定 1 人 5000、1 人 1000、其餘全部 2000）
 SEED_OPTIONS = {5000, 2000, 1000}
