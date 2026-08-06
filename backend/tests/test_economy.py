@@ -106,6 +106,12 @@ def test_deposit_interest_compound():
         assert s.get(models.Student, "F").deposit_balance == 172
 
 
+def test_meal_ignores_market_closed():
+    fresh_state(market_open=0); add_student("MM", 500)
+    assert scan(uid="MM", stall_id="meal", action="meal", amount=160)["balance"] == 340
+    assert scan(uid="MM", stall_id="grocery", action="debit", amount=10)["ok"] is False  # 其它照擋
+
+
 def test_tag_excludes_non_students_from_awards():
     fresh_state(); add_student("TS", 500); add_student("TC", 500)
     from services import report as report_svc

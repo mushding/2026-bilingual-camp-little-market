@@ -95,8 +95,9 @@ def write_txn(session, s: Student, stall: str, action: str, amount: int,
     ))
 
 
-# 需要 market_open 的 action（mail_kp 不需要 — 核銷可在關市後整理）
-NEEDS_MARKET = {"debit", "meal", "credit", "game_settle", "deposit", "withdraw",
+# 需要 market_open 的 action（mail_kp 不需要 — 核銷可在關市後整理；
+# meal 不需要 — 用餐時段常在場次收市後，餐費照收）
+NEEDS_MARKET = {"debit", "credit", "game_settle", "deposit", "withdraw",
                 "donate", "exchange_points", "guild_draw"}
 
 
