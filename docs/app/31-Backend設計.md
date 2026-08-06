@@ -274,7 +274,7 @@ GET  /api/admin/state                    # current_day, market_open, settlement_
 
 ## 6. 營前建表（seed_import.py）
 
-CSV/Excel 匯入欄位：`name, uid, seed_amount`（seed ∈ {5000,2000,1000}，按才幹固定分派：每組 1人5000、1人1000、其餘2000，非隨機）。
+CSV/Excel 匯入欄位：`name, uid, seed_amount`（seed ∈ {5000,2000,1000}，按才幹固定分派：每組 1人5000、2人1000、其餘2000，非隨機）。
 
 ```
 POST /api/admin/import   (multipart csv)        # 或 CLI: python seed_import.py students.csv
