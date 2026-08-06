@@ -421,8 +421,10 @@ async def admin_import(file: UploadFile):
                     skipped += 1
                     continue
                 seed = int(row["seed_amount"])
+                tag = (row.get("tag") or "").strip()
                 s.add(Student(uid=uid, card_uid=uid, name=row["name"].strip(), seed_amount=seed,
-                              balance=seed, group=row.get("group"), seat_no=row.get("seat_no"),
+                              balance=seed, group=row.get("group"),
+                              tag=tag if tag in roster.VALID_TAGS else "學員",
                               created_at=datetime.now(timezone.utc).isoformat(timespec="seconds")))
                 imported += 1
             except Exception as e:  # noqa: BLE001

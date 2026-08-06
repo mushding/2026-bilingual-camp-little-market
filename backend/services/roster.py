@@ -26,15 +26,16 @@ def list_all(s) -> dict:
 
 
 def add(s, entries: list) -> dict:
-    """批量新增名單（同名不擋——營隊可能真的有同名，靠組別/座號消歧）。尚未綁卡。"""
+    """批量新增名單（同名不擋——營隊可能真的有同名，靠組別消歧）。尚未綁卡。"""
     added = 0
     for e in entries:
         name = e.name.strip()
         if not name:
             continue
+        tag = (getattr(e, "tag", "") or "").strip()
         s.add(Student(uid=uuid.uuid4().hex, name=name,
                       group=(e.group or "").strip() or None,
-                      seat_no=(e.seat_no or "").strip() or None,
+                      tag=tag if tag in VALID_TAGS else "學員",
                       seed_amount=e.seed_amount, balance=e.seed_amount,
                       card_uid=None, created_at=_now()))
         added += 1

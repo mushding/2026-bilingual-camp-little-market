@@ -301,7 +301,7 @@ def dashboard(session) -> dict:
     for secs in guild_remaining.values():
         secs.sort()
     rows = [{
-        "uid": s.uid, "name": s.name, "group": s.group, "seat_no": s.seat_no,
+        "uid": s.uid, "name": s.name, "group": s.group, "tag": s.tag or "學員",
         "seed": s.seed_amount, "balance": s.balance, "deposit": s.deposit_balance,
         "asset": s.balance + s.deposit_balance,
         "points": s.points, "kingdom_points": s.kingdom_points,

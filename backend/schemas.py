@@ -58,7 +58,7 @@ class BindReq(BaseModel):
 class RosterEntry(BaseModel):
     name: str
     group: str | None = None
-    seat_no: str | None = None
+    tag: str = "學員"          # 學員/輔導/測試
     seed_amount: int = 2000
 
 

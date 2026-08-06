@@ -154,7 +154,7 @@
     </div>
     <div class="card">
       <h3>匯入名單 CSV</h3>
-      <p>欄位：uid,name,seed_amount,group,seat_no。已存在 UID 自動略過。</p>
+      <p>欄位：uid,name,seed_amount,group,tag（tag：學員/輔導/測試，留空＝學員）。已存在 UID 自動略過。</p>
       <div class="row">
         <input id="csv" type="file" accept=".csv">
         <button class="primary" onclick="importCsv()">上傳匯入</button>
@@ -199,11 +199,11 @@
     <div class="grid" id="rosterStats"></div>
     <div class="card">
       <h3>批量新增名單（報名未定案先建人，之後再綁卡）</h3>
-      <p>一行一人：<code>名字,組別,座號,起始金</code>（後三項可留空，起始金預設 2000）。</p>
+      <p>一行一人：<code>名字,組別,身分,起始金</code>（後三項可留空；身分＝學員/輔導/測試，預設學員；起始金預設 2000）。</p>
       <div class="row" style="align-items:flex-start">
         <textarea id="rosterLines" rows="5" style="flex:1;min-width:260px;font:inherit;
           padding:8px 10px;border-radius:12px;border:2px solid #D8CBA6;
-          background:var(--cardbg);color:var(--ink)" placeholder="王小明,A,1&#10;李小華,A,2,5000&#10;陳大文,B"></textarea>
+          background:var(--cardbg);color:var(--ink)" placeholder="王小明,A&#10;李小華,A,學員,5000&#10;張輔導,B,輔導"></textarea>
         <button class="primary" onclick="rosterAdd()">新增</button>
       </div>
       <span id="rosterAddMsg" class="muted"></span>
@@ -345,7 +345,7 @@ function renderStats() {
 }
 
 const COLS = [
-  ['name', '姓名', true], ['group', '小組', true], ['seat_no', '座號', true],
+  ['name', '姓名', true], ['group', '小組', true], ['tag', '身分', true],
   ['seed', '起始金', false], ['balance', '現金', false], ['deposit', '定存', false],
   ['asset', '總資產', false], ['points', '積分', false],
   ['kingdom_points', '天國', false], ['card_count', '卡', false],
@@ -510,8 +510,8 @@ async function rosterAdd() {
   const lines = $('#rosterLines').value.split('\n').map(l => l.trim()).filter(Boolean);
   if (!lines.length) return;
   const entries = lines.map(l => {
-    const [name, group, seat_no, seed] = l.split(/[,，]/).map(x => (x || '').trim());
-    return { name, group: group || null, seat_no: seat_no || null,
+    const [name, group, tag, seed] = l.split(/[,，]/).map(x => (x || '').trim());
+    return { name, group: group || null, tag: tag || '學員',
              seed_amount: seed ? parseInt(seed, 10) : 2000 };
   });
   try {
