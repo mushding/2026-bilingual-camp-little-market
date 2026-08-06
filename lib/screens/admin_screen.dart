@@ -118,15 +118,13 @@ class _AdminScreenState extends State<AdminScreen> {
                   Text('當前天：${st['current_day']}', style: const TextStyle(fontSize: 16)),
                   Text('市場：${st['market_open'] == true ? '開啟' : '已關閉'}',
                       style: const TextStyle(fontSize: 16)),
-                  Text('已結息次數：${st['settlement_count']} / 3'),
-                  Text('已結息天：${st['settled_days']}'),
                 ]),
               ),
             ),
           const SizedBox(height: 16),
           const Text('換日 set_day', style: _h),
           // 換日做啥
-          const Text('切換目前天數。影響各攤可用交易與『本攤位』下拉清單，並決定結息屬於哪一場。每場小市集開始前切換。',
+          const Text('切換目前天數。影響各攤可用交易與『本攤位』下拉清單。每場小市集開始前切換。',
               style: TextStyle(fontSize: 12, color: AppColors.muted)),
           Wrap(spacing: 8, children: [
             for (final d in ['D1', 'D2', 'D3'])
@@ -140,25 +138,6 @@ class _AdminScreenState extends State<AdminScreen> {
                       },
                 child: Text(d),
               ),
-          ]),
-          const Divider(height: 32),
-          const Text('每場結息 settle_interest（每場一次，最多 3 次）', style: _h),
-          Wrap(spacing: 8, children: [
-            for (final d in ['D1', 'D2', 'D3'])
-              // 已結息過就 disable + 打勾
-              if ((_state?['settled_days'] as List?)?.contains(d) == true)
-                FilledButton.tonal(onPressed: null, child: Text('結息 $d ✓'))
-              else
-                FilledButton.tonal(
-                  onPressed: _busy
-                      ? null
-                      : () async {
-                          if (await _confirm('結息 $d', '對所有定存 +20%（複利）。\n每場只按一次，不可逆。確定？')) {
-                            await _run(() => ApiClient.adminSettleInterest(d), '結息 $d');
-                          }
-                        },
-                  child: Text('結息 $d'),
-                ),
           ]),
           const Divider(height: 32),
           const Text('全體扣餐費 meal_charge_all（D2晚餐/D3午餐）', style: _h),

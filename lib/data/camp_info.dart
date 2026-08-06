@@ -98,6 +98,7 @@ const List<CampGroup> kGroups = [
       CampStudent('鍾美恩', 'Phoebe', '升小五'),
       CampStudent('張宸菲', 'Phoebe', '升小五'),
       CampStudent('余娉嫻', '', '升小六'),
+      CampStudent('梁語晨', '', '升小六'),
     ],
   ),
   CampGroup(

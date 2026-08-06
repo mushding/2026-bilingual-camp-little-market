@@ -120,11 +120,6 @@
       </div>
     </div>
     <div class="card">
-      <h3>每場結息 settle_interest（每場一次，最多 3 次）</h3>
-      <p>對所有定存 +20%（複利、捨去整數）。每場只按一次，不可逆。</p>
-      <div class="row" id="settleBtns"></div>
-    </div>
-    <div class="card">
       <h3>每日場控（截止 / 開市 / 5 分鐘提醒）</h3>
       <p>每場結束按「當日截止」凍結交易（學生才停得下來，不折現）；換日或按「重新開市」恢復。
          「5 分鐘提醒」會讓所有關主手機跳提醒。</p>
@@ -159,27 +154,9 @@
       <button class="warn" onclick="confirmRun('🏁 結算？現金×0.1 計入積分、凍結名次，不可逆。\n確定 D3 午餐已經扣完了嗎？','/api/admin/settle_final')">🏁 結算</button>
     </div>
     <div class="card">
-      <h3>匯入名單 CSV</h3>
-      <p>欄位：uid,name,seed_amount,group,tag（tag：學員/輔導/測試，留空＝學員）。已存在 UID 自動略過。</p>
-      <div class="row">
-        <input id="csv" type="file" accept=".csv">
-        <button class="primary" onclick="importCsv()">上傳匯入</button>
-        <span id="importMsg" class="muted"></span>
-      </div>
-    </div>
-    <div class="card">
       <h3>全重置 reset（測試用，不可復原）</h3>
       <p>學員回起始金、清空帳本/任務/賭局/見證、天數回 D1、市場重開。保留名單與裝置註冊。</p>
       <button class="danger" onclick="confirmRun('🧹 全重置？清空所有帳本與遊戲狀態，不可復原','/api/admin/reset')">🧹 Reset All</button>
-    </div>
-    <div class="card">
-      <h3>撤銷裝置 revoke</h3>
-      <p>依 label 撤銷已註冊的手機 token（遺失手機時用）。</p>
-      <div class="row">
-        <input id="revokeLabel" placeholder="裝置 label">
-        <button class="warn" onclick="revoke()">撤銷</button>
-        <span id="revokeMsg" class="muted"></span>
-      </div>
     </div>
     <p class="muted">註：讀卡 UID 需 NFC，僅手機 App 可用，電腦後台不提供。</p>
   </section>
@@ -315,7 +292,6 @@ function logout() {
 
 function boot() {
   $('#login').style.display = 'none'; $('#app').style.display = '';
-  buildSettleBtns();
   poll();
   pollTimer = setInterval(poll, 3000);
 }
@@ -324,7 +300,7 @@ function boot() {
 async function poll() {
   try {
     data = await api('/api/admin/dashboard');
-    renderState(); renderStats(); renderTable(); renderReportPick(); buildSettleBtns();
+    renderState(); renderStats(); renderTable(); renderReportPick();
     $('#updated').textContent = '更新於 ' + new Date().toLocaleTimeString();
   } catch (e) { $('#updated').textContent = '⚠️ ' + e.message; }
 }
@@ -344,7 +320,6 @@ function renderStats() {
   const items = [
     ['學生數', s.n_students], ['總資產（現金+定存）', s.total_asset],
     ['總積分', s.total_points], ['總天國點數', s.total_kp],
-    ['已結息', st.settlement_count + ' / 3'],
   ];
   $('#stats').innerHTML = items.map(([l, v]) =>
     `<div class="stat"><div class="l">${l}</div><div class="v num">${v}</div></div>`).join('');
@@ -550,22 +525,8 @@ async function rosterDel(id) {
 }
 
 // ── 總控操作 ──
-function buildSettleBtns() {
-  const done = (data && data.state.settled_days) || [];
-  $('#settleBtns').innerHTML = ['D1', 'D2', 'D3'].map(d =>
-    done.includes(d)
-      ? `<button disabled>結息 ${d} ✓</button>`
-      : `<button onclick="settle('${d}')">結息 ${d}</button>`).join('');
-}
-
 async function setDay(d) {
   try { await api('/api/admin/set_day', post({ day: d })); await poll(); toast('已換到 ' + d); }
-  catch (e) { toast(e.message, true); }
-}
-async function settle(d) {
-  if (!confirm(`結息 ${d}？對所有定存 +20%（複利），每場一次、不可逆。`)) return;
-  try { const r = await api('/api/admin/settle_interest', post({ day: d }));
-        await poll(); toast(`結息 ${d}：${r.students_settled} 人`); }
   catch (e) { toast(e.message, true); }
 }
 async function confirmRun(msg, path) {
@@ -592,26 +553,6 @@ async function mealChargeAll(preset, label) {
     $('#mealAmt').value = '';
   } catch (e) { toast(e.message, true); }
 }
-async function revoke() {
-  const label = $('#revokeLabel').value.trim();
-  if (!label) return;
-  try { const r = await api('/api/admin/revoke', post({ label }));
-        $('#revokeMsg').textContent = `已撤銷 ${r.revoked} 個`; }
-  catch (e) { $('#revokeMsg').textContent = e.message; }
-}
-async function importCsv() {
-  const f = $('#csv').files[0];
-  if (!f) { $('#importMsg').textContent = '請選檔'; return; }
-  const fd = new FormData(); fd.append('file', f);
-  $('#importMsg').textContent = '上傳中…';
-  try {
-    const r = await api('/api/admin/import', { method: 'POST', body: fd });
-    $('#importMsg').textContent = `匯入 ${r.imported}、略過 ${r.skipped}` +
-      (r.errors.length ? `、錯誤 ${r.errors.length}` : '');
-    await poll();
-  } catch (e) { $('#importMsg').textContent = e.message; }
-}
-
 const post = body => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 // ── 成績單 ──
