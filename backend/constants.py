@@ -61,7 +61,7 @@ MAIL_KP = 100
 WITNESS_KP = 100
 
 # 賭場桌限
-BET_MIN, BET_MAX = 10, 100
+BET_MIN, BET_MAX = 10, 500   # v2.11 上限 100→500（加開 200/500 檔）
 DICE_PAYOUT = {"big": 2, "small": 2, "seven": 5}  # 命中 balance += amount × payout（含退本金）
 
 # Day1 賣娃娃固定三檔
