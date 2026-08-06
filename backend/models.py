@@ -105,7 +105,8 @@ class GameState(Base):
     settlement_count: Mapped[int] = mapped_column(Integer, default=0)
     settled_days: Mapped[str] = mapped_column(Text, default="[]")  # JSON list
     closing_soon: Mapped[int] = mapped_column(Integer, default=0)  # 5分鐘提醒廣播（App 輪詢顯示）
-    final_closed: Mapped[int] = mapped_column(Integer, default=0)  # D3 最終關市（×0.1、不可逆）
+    final_closed: Mapped[int] = mapped_column(Integer, default=0)  # D3 最終關市（凍結市場，不可逆）
+    final_settled: Mapped[int] = mapped_column(Integer, default=0)  # D3 結算（×0.1 + 凍結名次，關市→扣午餐→才按）
     # 定存 tick 制（v2.7）— admin 定存頁可調
     interest_rate_pct: Mapped[float] = mapped_column(Float, default=3.0)
     interest_tick_min: Mapped[int] = mapped_column(Integer, default=10)

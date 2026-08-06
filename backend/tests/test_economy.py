@@ -150,17 +150,25 @@ def test_interest_tick():
         assert row["earned"] == 14 and row["deposit"] == 214
 
 
-def test_market_close_x01():
+def test_market_close_then_settle():
     fresh_state(day="D3"); add_student("G", 500)
     scan(uid="G", stall_id="bank", action="deposit", amount=100)  # bal 400, dep 100
     with S.begin() as s:
-        bank.market_close(s)
+        bank.market_close(s)          # 只凍結市場，不折算
+    # 關市後：攤位停、餐費照收（D3 午餐）
+    assert scan(uid="G", stall_id="grocery", action="debit", amount=1)["ok"] is False
+    assert scan(uid="G", stall_id="meal", action="meal", amount=100)["balance"] == 300
+    with S.begin() as s:
+        assert bank.settle_final(s)["ok"] is True
+        assert bank.settle_final(s)["ok"] is False   # 只可一次
     with S.begin() as s:
         g = s.get(models.Student, "G")
         assert g.balance == 0 and g.deposit_balance == 0
-        assert g.points == 50  # floor((400+100)*0.1)
-    # 關市後僅 lookup
-    assert scan(uid="G", stall_id="grocery", action="debit", amount=1)["ok"] is False
+        assert g.points == 40  # floor((300+100)*0.1)，午餐已先扣走 100
+    with S.begin() as s:                              # 沒關市不能結算
+        st = s.get(models.GameState, 1); st.final_closed = 0; st.final_settled = 0
+    with S.begin() as s:
+        assert bank.settle_final(s)["ok"] is False
 
 
 def test_meal_charge_all():

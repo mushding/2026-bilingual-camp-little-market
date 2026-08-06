@@ -220,9 +220,15 @@ def admin_meal_charge_all(req: schemas.MealChargeAllReq):
 @app.post("/api/admin/market_close")
 def admin_market_close():
     with SessionLocal.begin() as s:
-        out = bank.market_close(s)
+        return bank.market_close(s)
+
+
+@app.post("/api/admin/settle_final")
+def admin_settle_final():
+    with SessionLocal.begin() as s:
+        out = bank.settle_final(s)
         if out.get("ok"):
-            report.compute_ranks(s)  # 關市後凍結名次
+            report.compute_ranks(s)  # 結算後凍結名次
         return out
 
 

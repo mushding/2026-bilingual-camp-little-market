@@ -228,10 +228,26 @@ def meal_charge_all(session, amount: int) -> dict:
 
 
 def market_close(session) -> dict:
-    """D3 10:25 突襲。未兌換現金 + 定存本利 ×0.1 計入積分，歸零，鎖市場。"""
+    """D3 10:25 突襲：凍結市場（攤位全停、只剩 meal 可扣）。
+    ×0.1 折算移到 settle_final()——關市後還要收 D3 午餐，扣完午餐才結算。"""
     st = get_state(session)
     if not st.market_open:
         return {"ok": False, "message": "市場已關閉"}
+    st.market_open = 0
+    st.final_closed = 1
+    st.closing_soon = 0
+    return {"ok": True, "market_open": False,
+            "message": "市場已凍結；收完 D3 午餐後再按「結算」"}
+
+
+def settle_final(session) -> dict:
+    """D3 結算（市場關閉 → 全體扣午餐 → 按這顆）：
+    未兌換現金 + 定存本利 ×0.1 計入積分、歸零，凍結名次。只可按一次。"""
+    st = get_state(session)
+    if not st.final_closed:
+        return {"ok": False, "message": "要先市場關閉才能結算"}
+    if st.final_settled:
+        return {"ok": False, "message": "已結算過"}
     affected = 0
     for s in session.scalars(select(Student).where(Student.card_uid.is_not(None))):
         taxable = s.balance + s.deposit_balance
@@ -242,10 +258,8 @@ def market_close(session) -> dict:
         write_txn(session, s, "system", "market_close", converted, st.current_day,
                   {"taxable": taxable})
         affected += 1
-    st.market_open = 0
-    st.final_closed = 1
-    st.closing_soon = 0
-    return {"ok": True, "students": affected, "market_open": False}
+    st.final_settled = 1
+    return {"ok": True, "students": affected}
 
 
 def reset_all(session) -> dict:
@@ -272,6 +286,7 @@ def reset_all(session) -> dict:
     st.settled_days = "[]"
     st.closing_soon = 0
     st.final_closed = 0
+    st.final_settled = 0
     return {"ok": True, "students_reset": n}
 
 
@@ -281,7 +296,8 @@ def admin_state(session) -> dict:
             "settlement_count": st.settlement_count,
             "settled_days": json.loads(st.settled_days or "[]"),
             "closing_soon": bool(st.closing_soon),
-            "final_closed": bool(st.final_closed)}
+            "final_closed": bool(st.final_closed),
+            "final_settled": bool(st.final_settled)}
 
 
 def dashboard(session) -> dict:

@@ -61,7 +61,7 @@ def init_db():
     Base.metadata.create_all(write_engine)
     # 舊 DB 補欄位（create_all 不會 ALTER 既有表；欄位已存在就略過）
     with write_engine.begin() as conn:
-        for col in ("closing_soon", "final_closed"):
+        for col in ("closing_soon", "final_closed", "final_settled"):
             try:
                 conn.exec_driver_sql(
                     f"ALTER TABLE game_state ADD COLUMN {col} INTEGER DEFAULT 0")
