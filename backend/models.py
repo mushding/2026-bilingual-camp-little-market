@@ -21,6 +21,7 @@ class Student(Base):
     final_rank_kp: Mapped[int | None] = mapped_column(Integer, nullable=True)
     group: Mapped[str | None] = mapped_column(String, nullable=True)   # 小組（消歧）
     seat_no: Mapped[str | None] = mapped_column(String, nullable=True)  # 座號（消歧）
+    tag: Mapped[str] = mapped_column(String, default="學員")  # 學員/輔導/測試；只有學員進頒獎榜
     card_uid: Mapped[str | None] = mapped_column(String, nullable=True, unique=True, index=True)
     created_at: Mapped[str] = mapped_column(String, default="")
 

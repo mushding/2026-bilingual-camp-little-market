@@ -106,6 +106,21 @@ def test_deposit_interest_compound():
         assert s.get(models.Student, "F").deposit_balance == 172
 
 
+def test_tag_excludes_non_students_from_awards():
+    fresh_state(); add_student("TS", 500); add_student("TC", 500)
+    from services import report as report_svc
+    with S.begin() as s:
+        s.get(models.Student, "TC").tag = "輔導"
+        s.get(models.Student, "TC").points = 99999   # 輔導分數最高也不入榜
+        s.get(models.Student, "TS").points = 1
+    with S.begin() as s:
+        a = bank.awards(s)
+        assert "TC" not in [x["uid"] for x in a["points_top3"]]
+        assert report_svc.live_ranks(s, "TC") == (None, None)  # 輔導無名次
+        rp, _ = report_svc.live_ranks(s, "TS")
+        assert rp is not None
+
+
 def test_interest_tick():
     # 注意：測試共用同一顆 in-memory DB，前面測試的學生若還有定存也會被 tick 到，
     # 所以只對 IT 一人斷言，不看全體 total。

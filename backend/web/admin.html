@@ -136,10 +136,15 @@
     </div>
     <div class="card">
       <h3>全體扣餐費 meal_charge_all（D2 晚餐 / D3 午餐）</h3>
-      <p>不擺攤的餐：輸入單價，所有已綁卡學員一次統一扣。餘額不足者只扣到 0（餐照供）。</p>
+      <p>不擺攤的餐：一鍵對所有已綁卡學員統一扣主餐錢。餘額不足者只扣到 0（餐照供）。
+         加價購（起士片/豆乾）不在這裡——由收費同工在 App 餐費攤逐人掃卡點品項。</p>
       <div class="row">
-        <input id="mealAmt" type="number" min="1" placeholder="每人扣多少（例 100）" style="width:180px">
-        <button class="warn" onclick="mealChargeAll()">🍱 全體扣餐費</button>
+        <button class="warn" onclick="mealChargeAll(180, 'D2 晚餐：經典肉醬義大利麵套餐')">🍝 D2 晚餐 義大利麵套餐 $180</button>
+        <button class="warn" onclick="mealChargeAll(180, 'D3 午餐：台式控肉便當套餐')">🍱 D3 午餐 控肉便當套餐 $180</button>
+      </div>
+      <div class="row">
+        <input id="mealAmt" type="number" min="1" placeholder="自訂金額（備用）" style="width:180px">
+        <button onclick="mealChargeAll()">自訂金額扣款</button>
       </div>
     </div>
     <div class="card">
@@ -213,19 +218,20 @@
       <button onclick="loadRoster()">↻ 重新整理</button>
     </div>
     <div class="tblwrap"><table id="rosterTbl"><thead>
-      <tr><th class="l">姓名</th><th class="l">組別</th><th class="l">座號</th><th class="l">起始金</th>
+      <tr><th class="l">姓名</th><th class="l">組別</th><th class="l">身分</th><th class="l">起始金</th>
           <th class="l">卡片 UID</th><th>操作</th></tr>
     </thead><tbody></tbody></table></div>
   </section>
 
   <section id="report" class="panel">
     <div class="card">
-      <h3>全部學生成績單（A4 批次列印）</h3>
-      <p>產生一份 HTML，每位學生一張 A4。開啟後用瀏覽器列印（Ctrl/⌘+P）→ 存成 PDF 或直接印。
+      <h3>全部學生成績單（批次列印）</h3>
+      <p>產生一份 HTML，每位學生一張。開啟後用瀏覽器列印（Ctrl/⌘+P）→ 存成 PDF 或直接印。
          建議市場關閉後再印（名次才凍結）。</p>
       <div class="row">
-        <button class="primary" onclick="openReport('/api/report/all/print')">🖨️ 開啟全部成績單</button>
-        <span class="muted">於新分頁開啟，再 Ctrl/⌘+P</span>
+        <button class="primary" onclick="openReport('/api/report/all/print')">🖨️ 開啟全部成績單（A4）</button>
+        <button onclick="openReport('/api/report/all/print?compact=1')">🌱 省紙版（A4 橫放，左右各印一人）</button>
+        <span class="muted">於新分頁開啟，再 Ctrl/⌘+P；省紙版列印時記得把方向改成「橫向」</span>
       </div>
     </div>
     <div class="card">
@@ -439,6 +445,10 @@ function renderRoster() {
   const groupOptions = g => ['', ...knownGroups].map(o =>
     `<option value="${escapeHtml(o)}" ${o === (g || '') ? 'selected' : ''}>${o ? escapeHtml(o) : '（未分組）'}</option>`
   ).join('') + `<option value="${NEW_GROUP}">＋ 新組別…</option>`;
+  const TAGS = ['學員', '輔導', '測試'];
+  const TAG_EMOJI = { '學員': '🎒', '輔導': '🧑‍🏫', '測試': '🧪' };
+  const tagOptions = t => TAGS.map(o =>
+    `<option value="${o}" ${o === (t || '學員') ? 'selected' : ''}>${TAG_EMOJI[o]} ${o}</option>`).join('');
   const SEED_CHOICES = [1000, 2000, 5000];
   const seedOptions = v => [...new Set([...SEED_CHOICES, v])].sort((a, b) => a - b).map(n =>
     `<option value="${n}" ${n === v ? 'selected' : ''}>${n}</option>`
@@ -458,7 +468,7 @@ function renderRoster() {
     html += `<tr>
       <td class="l">${r.bound ? '✅' : '❌'} ${escapeHtml(r.name)}</td>
       <td class="l"><select onchange="rosterSetGroup('${r.uid}', this)">${groupOptions(r.group)}</select></td>
-      <td class="l">${escapeHtml(r.seat_no || '')}</td>
+      <td class="l"><select onchange="rosterSetTag('${r.uid}', this)">${tagOptions(r.tag)}</select></td>
       <td class="l num"><select onchange="rosterSetSeed('${r.uid}', this)">${seedOptions(r.seed_amount)}</select></td>
       <td class="l" style="font-family:monospace">${r.card_uid ? escapeHtml(r.card_uid) : '<span class="err">未綁定</span>'}</td>
       <td>${r.bound
@@ -477,6 +487,13 @@ async function rosterSetGroup(id, sel) {
   }
   try {
     await api('/api/admin/roster/set_group', post({ uid: id, group }));
+    await loadRoster();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function rosterSetTag(id, sel) {
+  try {
+    await api('/api/admin/roster/set_tag', post({ uid: id, tag: sel.value }));
     await loadRoster();
   } catch (e) { toast(e.message, true); }
 }
@@ -557,10 +574,11 @@ async function runSimple(path, label) {
     toast(r.ok === false ? (r.message || label + '失敗') : label + '完成', r.ok === false);
   } catch (e) { toast(e.message, true); }
 }
-async function mealChargeAll() {
-  const amt = parseInt($('#mealAmt').value, 10);
+async function mealChargeAll(preset, label) {
+  const amt = preset || parseInt($('#mealAmt').value, 10);
   if (!amt || amt <= 0) { toast('請輸入金額', true); return; }
-  if (!confirm(`🍱 全體扣餐費？所有已綁卡學員每人扣 $${amt}，餘額不足者只扣到 0。\n\n確定執行？`)) return;
+  const what = label ? `【${label}】` : '';
+  if (!confirm(`🍱 全體扣餐費${what}？所有已綁卡學員每人扣 $${amt}，餘額不足者只扣到 0。\n\n確定執行？`)) return;
   try {
     const r = await api('/api/admin/meal_charge_all', post({ amount: amt }));
     await poll();

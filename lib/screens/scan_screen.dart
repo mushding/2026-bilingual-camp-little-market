@@ -10,6 +10,7 @@ import '../services/nfc_service.dart';
 import '../services/settings.dart';
 import '../widgets/amount_input_sheet.dart';
 import '../widgets/exchange_picker.dart';
+import '../widgets/meal_menu_sheet.dart';
 import '../widgets/student_card.dart';
 import 'admin_screen.dart';
 import 'bank_transfer_screen.dart';
@@ -224,9 +225,14 @@ class _ScanScreenState extends State<ScanScreen> {
         amount = v;
         break;
       case TxnType.meal:
-        // D1 下午攤位吃的／D2 午餐：攤主輸入該生消費總金額（金額不限檔）
-        final v = await showAmountInput(context,
-            title: '餐費金額', quickKeys: const [150], min: 1, hint: '輸入總金額（便當預設 150）');
+        // 菜單點選（v2.9）：看學生拿什麼點什麼，自動加總。預選後端 current_day，
+        // sheet 內仍可手動切天（後端連不上時同工可自救）。
+        String day = 'D1';
+        try {
+          day = (await ApiClient.appState())['current_day'] as String? ?? 'D1';
+        } catch (_) {}
+        if (!mounted) return;
+        final v = await showMealMenu(context, day: day);
         if (v == null) return;
         amount = v;
         break;

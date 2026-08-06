@@ -379,6 +379,12 @@ def roster_set_group(req: schemas.RosterSetGroupReq):
         return roster.set_group(s, req.uid, req.group)
 
 
+@app.post("/api/admin/roster/set_tag")
+def roster_set_tag(req: schemas.RosterSetTagReq):
+    with SessionLocal.begin() as s:
+        return roster.set_tag(s, req.uid, req.tag)
+
+
 @app.post("/api/admin/roster/set_seed")
 def roster_set_seed(req: schemas.RosterSetSeedReq):
     with SessionLocal.begin() as s:
@@ -426,15 +432,16 @@ async def admin_import(file: UploadFile):
 
 # ── 報表 ────────────────────────────────────────────────────────────────
 @app.get("/api/report/all/print", response_class=HTMLResponse)
-def report_all_print():
-    """全部學生成績單一份 HTML（每人一張 A4，page-break）。瀏覽器 Ctrl+P → 存 PDF/印。"""
+def report_all_print(compact: bool = Query(False)):
+    """全部學生成績單一份 HTML（每人一張，page-break）。瀏覽器 Ctrl+P → 存 PDF/印。
+    compact=true → 省紙版（A5，密度加大），同樣內容約省一半紙張面積。"""
     from sqlalchemy import select
     from models import Student
     with ReadSessionLocal() as s:
         uids = s.scalars(select(Student).where(Student.card_uid.is_not(None))
                         .order_by(Student.final_rank_points, Student.name)).all()
         datas = [report.build_data(s, x.uid) for x in uids]
-        return report.render_all([d for d in datas if d])
+        return report.render_all([d for d in datas if d], compact=compact)
 
 
 @app.get("/api/report/awards/print", response_class=HTMLResponse)

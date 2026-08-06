@@ -144,8 +144,10 @@ def bulk_expense_income(session) -> dict[str, tuple[int, int]]:
 
 
 def live_ranks(session, uid: str) -> tuple[int | None, int | None]:
-    """即時名次（積分榜／管家獎），依目前全體已綁卡學生現況即算即回，不等 market_close。"""
-    studs = session.scalars(select(Student).where(Student.card_uid.is_not(None))).all()
+    """即時名次（積分榜／管家獎），依目前全體已綁卡「學員」現況即算即回，不等 market_close。
+    輔導/測試不入榜（tag != 學員 → 名次 None）。"""
+    studs = session.scalars(select(Student).where(
+        Student.card_uid.is_not(None), Student.tag == "學員")).all()
     by_points = sorted(studs, key=lambda x: x.points, reverse=True)
     by_kp = sorted(studs, key=lambda x: x.kingdom_points, reverse=True)
     rp = next((i for i, x in enumerate(by_points, 1) if x.uid == uid), None)
@@ -156,7 +158,8 @@ def live_ranks(session, uid: str) -> tuple[int | None, int | None]:
 def compute_ranks(session):
     """market_close 後把名次「凍結」寫回快取（供 dashboard 等其他頁面顯示定案排名）。
     report 本身已改用 live_ranks() 即時算，不依賴這裡的快取。"""
-    studs = session.scalars(select(Student).where(Student.card_uid.is_not(None))).all()
+    studs = session.scalars(select(Student).where(
+        Student.card_uid.is_not(None), Student.tag == "學員")).all()
     for i, s in enumerate(sorted(studs, key=lambda x: x.points, reverse=True), 1):
         s.final_rank_points = i
     for i, s in enumerate(sorted(studs, key=lambda x: x.kingdom_points, reverse=True), 1):
@@ -257,6 +260,47 @@ td.r,th.r { text-align:right; font-variant-numeric:tabular-nums; }
 .msg { margin-top:14px; padding:12px 16px; background:var(--gold-soft);
        border-left:4px solid var(--gold); border-radius:0 8px 8px 0; font-size:12.5px; line-height:1.7; }
 .msg b { color:var(--green); }
+"""
+
+# 省紙精簡版（左右並排：一張 A4 橫放塞兩人）。字級/間距等比縮小約 0.6～0.65，
+# 裝飾插圖縮小騰出空間。只加在 render_all(compact=True) 之後，靠 CSS cascade
+# 覆蓋 _STYLE，不用另外維護一份版面。兩人一組包一個 .sheet（見 _pair_bodies），
+# .sheet 之間才換頁；.sheet 內兩個 .page 用 flex 並排，需覆蓋掉基本樣式的
+# `.page + .page { page-break-before:always }`（否則右邊那份會被擠去下一頁）。
+_COMPACT_STYLE = """
+@page { size:A4 landscape; margin:8mm; }
+.sheet { display:flex; gap:8mm; align-items:flex-start; }
+.sheet + .sheet { page-break-before:always; }
+.sheet .page { flex:1 1 0; min-width:0; padding:2mm 2mm 4mm; }
+.sheet .page + .page { page-break-before:auto; border-left:1px dashed var(--line); padding-left:4mm; }
+.deco { transform:scale(.55); }
+.deco.tr { top:-3mm; right:-3mm; }
+.deco.bl { bottom:-3mm; left:-3mm; }
+.deco.br { bottom:-3mm; right:-3mm; }
+.hd { padding-bottom:5px; }
+.hd .camp { font-size:8px; letter-spacing:2px; }
+.hd .name { font-size:17px; }
+.hd .name small { font-size:9px; }
+.hd .meta { font-size:8px; }
+.hd .theme { font-size:9px; }
+.tracks { gap:7px; margin:8px 0; }
+.track { padding:8px 10px; border-radius:8px; }
+.track .l { font-size:8px; }
+.track .big { font-size:23px; }
+.track .rk { top:8px; right:10px; font-size:8px; padding:1px 6px; }
+.kpis { grid-template-columns:repeat(3,1fr); gap:5px; margin:7px 0; }
+.kpi { padding:5px 7px; border-radius:7px; }
+.kpi .l { font-size:7px; }
+.kpi .v { font-size:12.5px; }
+.charts { gap:5px 7px; margin:5px 0 3px; }
+.chart { padding:4px 6px; border-radius:7px; }
+.chart h3 { font-size:7.5px; }
+.chart h3 .dot { width:5px; height:5px; margin-right:3px; }
+.ledger-h { font-size:8px; margin:7px 0 3px; }
+table { font-size:6.5px; }
+th,td { padding:2px 4px; }
+.tag { font-size:6px; padding:0 4px; }
+.msg { margin-top:8px; padding:6px 9px; font-size:7.8px; border-left-width:3px; }
 """
 
 _CAMP_TITLE = "2026 理財島之好管家 · 小市集"
@@ -380,9 +424,9 @@ def _render_body(data: dict) -> str:
 </div>"""
 
 
-def _wrap(title: str, body: str) -> str:
+def _wrap(title: str, body: str, extra_style: str = "") -> str:
     return (f'<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
-            f'<title>{html.escape(title)}</title><style>{_STYLE}</style></head>'
+            f'<title>{html.escape(title)}</title><style>{_STYLE}{extra_style}</style></head>'
             f'<body>{body}</body></html>')
 
 
@@ -390,12 +434,23 @@ def render_html(data: dict) -> str:
     return _wrap(f"{data['name']} · 小市集成績單", _render_body(data))
 
 
-def render_all(datas: list[dict]) -> str:
-    """批次列印：每位學生一張 A4（page-break）。瀏覽器 Ctrl+P 直接印或存 PDF。"""
+def _pair_bodies(datas: list[dict]) -> str:
+    """省紙版排版：兩人一組包成 .sheet，靠 flex 在同一張 A4 橫放紙上左右並排。"""
+    sheets = []
+    for i in range(0, len(datas), 2):
+        pair = datas[i:i + 2]
+        sheets.append('<div class="sheet">' + "".join(_render_body(d) for d in pair) + "</div>")
+    return "".join(sheets)
+
+
+def render_all(datas: list[dict], compact: bool = False) -> str:
+    """批次列印：每位學生一張（page-break）。瀏覽器 Ctrl+P 直接印或存 PDF。
+    compact=True → 省紙版，一張 A4 橫放並排印兩人，同樣內容約省一半紙張。"""
     if not datas:
         return _wrap("小市集成績單（批次）", '<p style="padding:20px">尚無學生資料</p>')
-    body = "".join(_render_body(d) for d in datas)
-    return _wrap(f"小市集成績單批次（{len(datas)} 人）", body)
+    body = _pair_bodies(datas) if compact else "".join(_render_body(d) for d in datas)
+    title = f"小市集成績單批次（{len(datas)} 人{'・省紙版' if compact else ''}）"
+    return _wrap(title, body, _COMPACT_STYLE if compact else "")
 
 
 # ── 頒獎典禮投影片（16:9 橫式，每項一頁，瀏覽器 Ctrl+P → 存 PDF 上台用） ──────

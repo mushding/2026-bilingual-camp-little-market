@@ -80,6 +80,11 @@ class RosterSetGroupReq(BaseModel):
     group: str | None = None
 
 
+class RosterSetTagReq(BaseModel):
+    uid: str
+    tag: str
+
+
 class RosterSetSeedReq(BaseModel):
     uid: str
     seed_amount: int

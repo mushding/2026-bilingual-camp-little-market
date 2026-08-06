@@ -17,6 +17,7 @@ def list_all(s) -> dict:
                                                Student.name)).all()
     entries = [{
         "uid": r.uid, "name": r.name, "group": r.group or "", "seat_no": r.seat_no or "",
+        "tag": r.tag or "學員",
         "seed_amount": r.seed_amount, "card_uid": r.card_uid, "bound": r.card_uid is not None,
     } for r in rows]
     bound = sum(1 for e in entries if e["bound"])
@@ -63,6 +64,20 @@ def set_group(s, uid: str, group: str | None) -> dict:
     g = (group or "").strip() or None
     stu.group = g
     return {"ok": True, "uid": stu.uid, "name": stu.name, "group": g or ""}
+
+
+VALID_TAGS = ("學員", "輔導", "測試")
+
+
+def set_tag(s, uid: str, tag: str) -> dict:
+    """改身分 tag。只有「學員」會計入頒獎榜／名次。"""
+    if tag not in VALID_TAGS:
+        return {"ok": False, "message": f"tag 需為 {'/'.join(VALID_TAGS)}"}
+    stu = s.get(Student, uid)
+    if stu is None:
+        return {"ok": False, "message": "查無此名單項目"}
+    stu.tag = tag
+    return {"ok": True, "uid": stu.uid, "name": stu.name, "tag": tag}
 
 
 def set_seed(s, uid: str, seed_amount: int) -> dict:

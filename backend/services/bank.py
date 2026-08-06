@@ -327,7 +327,9 @@ def awards(session) -> dict:
     即時算，不寫回任何欄位（可以在任何時間點按，重複按結果一樣只是即時值）。"""
     from services.report import bulk_expense_income
 
-    studs = session.scalars(select(Student).where(Student.card_uid.is_not(None))).all()
+    # 只有 tag=學員 進頒獎榜；輔導/測試帳號玩歸玩，不佔名次
+    studs = session.scalars(select(Student).where(
+        Student.card_uid.is_not(None), Student.tag == "學員")).all()
     if not studs:
         return {"points_top3": [], "kp_top3": [], "best_earner": None,
                 "hardest_worker": None, "big_spender": None}
@@ -344,8 +346,10 @@ def awards(session) -> dict:
     earner_diff = (earner.balance + earner.deposit_balance) - earner.seed_amount
 
     completed: dict[str, int] = {}
+    stud_uids = {x.uid for x in studs}
     for t in session.scalars(select(GuildTask).where(GuildTask.status == "completed")):
-        completed[t.uid] = completed.get(t.uid, 0) + 1
+        if t.uid in stud_uids:  # 輔導/測試完成的任務不搶「勤奮工作」獎
+            completed[t.uid] = completed.get(t.uid, 0) + 1
     hardest_worker = None
     if completed:
         top_uid = max(completed, key=lambda u: completed[u])
