@@ -30,6 +30,9 @@ class _GroupCard extends StatelessWidget {
     final venue = L10n.isEn
         ? (kVenueEn[group.churchVenue] ?? group.churchVenue)
         : group.churchVenue;
+    final room = L10n.isEn
+        ? (kVenueEn[group.classroom] ?? group.classroom)
+        : group.classroom;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -63,8 +66,8 @@ class _GroupCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-                L10n.t('石小 ${group.classroom} ｜ 水庫 $venue',
-                    'Shimen ES ${group.classroom} | Church: $venue'),
+                L10n.t('石小 $room ｜ 水庫 $venue',
+                    'Shimen ES $room | Church: $venue'),
                 style: const TextStyle(fontSize: 13, color: AppColors.muted)),
             const SizedBox(height: 6),
             Wrap(

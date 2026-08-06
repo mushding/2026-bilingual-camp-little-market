@@ -31,6 +31,7 @@ class CampGroup {
 
 /// 中文場地/年級 → 英文（groups/maps 畫面共用）。
 const Map<String, String> kVenueEn = {
+  '自然教室': 'Science Room',
   '活動中心（大）': 'Activity Center (L)',
   '活動中心（中）': 'Activity Center (M)',
   '活動中心（小）': 'Activity Center (S)',
@@ -53,7 +54,7 @@ const Map<String, String> kGradeEn = {
 
 const List<CampGroup> kGroups = [
   CampGroup(
-    number: 1, band: '國小', classroom: '3-1', churchVenue: '活動中心（大）',
+    number: 1, band: '國小', classroom: '自然教室', churchVenue: '活動中心（大）',
     coaches: ['周玲玲 Tissa', '湯詠恩 Anthony', 'Joyce Poon（美國同工）'],
     students: [
       CampStudent('曹少驊', 'Eddie', '升小五'),
@@ -65,7 +66,7 @@ const List<CampGroup> kGroups = [
     ],
   ),
   CampGroup(
-    number: 2, band: '國小', classroom: '3-3', churchVenue: '圖書室',
+    number: 2, band: '國小', classroom: '3-1', churchVenue: '圖書室',
     coaches: ['林啟昌 Paul', '田世豪 Steve', 'Jennifer Wong（美國同工）'],
     students: [
       CampStudent('盧宥霖', '', '升小六'),
@@ -77,7 +78,7 @@ const List<CampGroup> kGroups = [
     ],
   ),
   CampGroup(
-    number: 3, band: '國小', classroom: '3-4', churchVenue: '兒童室（外）',
+    number: 3, band: '國小', classroom: '3-2', churchVenue: '兒童室（外）',
     coaches: ['陳貞瑾 Debbie', '陳世惟 Richie', 'Jason Lee（美國同工）'],
     students: [
       CampStudent('吳心睿', 'Zack', '升小六'),
@@ -89,7 +90,7 @@ const List<CampGroup> kGroups = [
     ],
   ),
   CampGroup(
-    number: 4, band: '國小', classroom: '3-5', churchVenue: '活動中心（中）',
+    number: 4, band: '國小', classroom: '3-3', churchVenue: '活動中心（中）',
     coaches: ['葉禮瑋 Leo', '張心樂 Joy', '魏加恩 Luke', 'Elise Chow（美國同工）'],
     students: [
       CampStudent('鍾揚恩', 'Jeremy', '升小五', '不喝牛奶/豆漿'),
@@ -100,7 +101,7 @@ const List<CampGroup> kGroups = [
     ],
   ),
   CampGroup(
-    number: 5, band: '國小', classroom: '5-1', churchVenue: '地下室玻璃屋',
+    number: 5, band: '國小', classroom: '3-4', churchVenue: '地下室玻璃屋',
     coaches: ['鄭安康 Ankang', '隋季庭 Ester', '沈智如 Tina', 'Kay Chow（美國同工）'],
     students: [
       CampStudent('徐浚瀧', 'Gino', '升小五'),
@@ -111,7 +112,7 @@ const List<CampGroup> kGroups = [
     ],
   ),
   CampGroup(
-    number: 6, band: '國小', classroom: '4-1', churchVenue: '青年營地',
+    number: 6, band: '國小', classroom: '3-5', churchVenue: '青年營地',
     coaches: ['黃嘉慶 Eric', '楊文臻 David', '林宛萱 Destiny', '（方睿帆 Jerry）', 'Caleb Leung（美國同工）'],
     students: [
       CampStudent('鍾浩恩', 'Joseph', '升小五'),
@@ -122,7 +123,7 @@ const List<CampGroup> kGroups = [
     ],
   ),
   CampGroup(
-    number: 7, band: '國中', classroom: '4-2', churchVenue: '副堂',
+    number: 7, band: '國中', classroom: '4-1', churchVenue: '副堂',
     coaches: ['楊芳齊 Anna', '陳宥安 Money', 'Anne Leung（美國同工）'],
     students: [
       CampStudent('傅泰晨', 'Chen', '升國一'),
@@ -134,7 +135,7 @@ const List<CampGroup> kGroups = [
     ],
   ),
   CampGroup(
-    number: 8, band: '國中', classroom: '4-3', churchVenue: '兒童室（內）',
+    number: 8, band: '國中', classroom: '4-2', churchVenue: '兒童室（內）',
     coaches: ['張詩平 Timothy', '尹暄旻 Doris', 'Evan Leung（美國同工）'],
     students: [
       CampStudent('張紹真', 'Benjamin', '升國一'),
