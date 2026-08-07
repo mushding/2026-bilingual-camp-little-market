@@ -60,6 +60,7 @@
   #login input { width:100%; margin:12px 0; text-align:center; }
   .muted { color:var(--muted); font-size:12px; }
   .pill { font-size:11px; padding:1px 8px; border-radius:999px; background:var(--sky); color:var(--teal-dark); font-weight:700; }
+  .namelink { color:var(--teal-dark); cursor:pointer; text-decoration:underline dotted; }
   .awGrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:14px; margin-top:14px; }
   .awCard h3 { margin:0 0 10px; font-size:16px; color:var(--teal-dark); }
   .awRow { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px dashed var(--line); }
@@ -352,6 +353,8 @@ function renderTable() {
   const fmtMMSS = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   $('#tbl tbody').innerHTML = rows.map(r => '<tr>' + COLS.map(([k, , isL]) => {
     let v = r[k] == null ? '' : escapeHtml(r[k]);
+    if (k === 'name') v = `<a class="namelink" title="開啟歷史交易成績單" data-uid="${escapeHtml(r.uid)}"
+        onclick="openReport('/api/report/' + encodeURIComponent(this.dataset.uid))">${v}</a>`;
     if (k === 'guild_task_count' && r[k] > 0) v = `<span class="pill">${escapeHtml(r[k])}</span>`;
     if (k === 'guild_task_remaining') v = (r[k] || []).map(fmtMMSS).join('、');
     return `<td class="${isL ? 'l' : 'num'}">${v}</td>`;
