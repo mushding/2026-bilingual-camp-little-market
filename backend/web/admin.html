@@ -61,6 +61,12 @@
   .muted { color:var(--muted); font-size:12px; }
   .pill { font-size:11px; padding:1px 8px; border-radius:999px; background:var(--sky); color:var(--teal-dark); font-weight:700; }
   .namelink { color:var(--teal-dark); cursor:pointer; text-decoration:underline dotted; }
+  .vizGrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(340px,1fr)); gap:14px; }
+  .vizGrid .card { margin:0; }
+  .vizGrid svg { display:block; width:100%; height:auto; }
+  .vizGrid svg text { font-family:inherit; }
+  #vizTip { position:fixed; display:none; pointer-events:none; z-index:20; background:var(--teal-dark);
+            color:#F2F7F2; font-size:12px; padding:6px 10px; border-radius:10px; white-space:nowrap; }
   .awGrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:14px; margin-top:14px; }
   .awCard h3 { margin:0 0 10px; font-size:16px; color:var(--teal-dark); }
   .awRow { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px dashed var(--line); }
@@ -93,6 +99,7 @@
 </header>
 <nav>
   <button data-tab="dash" class="active" onclick="showTab('dash')">📊 即時總覽</button>
+  <button data-tab="viz" onclick="showTab('viz')">📈 圖表總覽 <span class="pill">beta</span></button>
   <button data-tab="admin" onclick="showTab('admin')">⚙️ 總控操作</button>
   <button data-tab="interest" onclick="showTab('interest')">💰 定存</button>
   <button data-tab="roster" onclick="showTab('roster')">🪪 綁卡名單</button>
@@ -108,6 +115,17 @@
       <span class="muted">每 3 秒自動更新；點欄位標題排序</span>
     </div>
     <div class="tblwrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="viz" class="panel">
+    <div class="grid" id="vizStats"></div>
+    <div class="vizGrid">
+      <div class="card"><h3>各組總資產</h3><p>現金＋定存，只計學員</p><div id="vizGroupAsset"></div></div>
+      <div class="card"><h3>各組總積分</h3><p>只計學員</p><div id="vizGroupPoints"></div></div>
+      <div class="card"><h3>積分 Top 10</h3><p>只計學員；點名字開成績單</p><div id="vizTopPoints"></div></div>
+      <div class="card"><h3>資產分布</h3><p>每 500 元一級距，只計學員</p><div id="vizAssetHist"></div></div>
+    </div>
+    <div id="vizTip"></div>
   </section>
 
   <section id="admin" class="panel">
@@ -302,6 +320,7 @@ async function poll() {
   try {
     data = await api('/api/admin/dashboard');
     renderState(); renderStats(); renderTable(); renderReportPick();
+    if ($('#viz').classList.contains('show')) renderViz();
     $('#updated').textContent = '更新於 ' + new Date().toLocaleTimeString();
   } catch (e) { $('#updated').textContent = '⚠️ ' + e.message; }
 }
@@ -361,12 +380,129 @@ function renderTable() {
   }).join('') + '</tr>').join('');
 }
 
+// ── 圖表總覽 (beta) ──
+// 單色系（teal）循序色：每張圖都是單一量值序列，不做多色分類；文字一律用文字色。
+const VIZ = { bar: '#3D7F7C', ink: '#2E4A4E', muted: '#6E7F76', grid: '#E5DBBB' };
+const fmtN = n => n.toLocaleString('en-US');
+
+// 橫向 bar：資料端（右）4px 圓角、基線（左）方角
+function vizBarPath(x, y, w, h) {
+  if (w <= 0) return '';
+  const r = Math.min(4, w, h / 2);
+  return `M${x},${y} h${w - r} a${r},${r} 0 0 1 ${r},${r} v${h - 2 * r} a${r},${r} 0 0 1 -${r},${r} h${r - w} z`;
+}
+// 直向 column：資料端（上）4px 圓角、基線（下）方角
+function vizColPath(x, y, w, h) {
+  if (h <= 0) return '';
+  const r = Math.min(4, h, w / 2);
+  return `M${x},${y + h} v${r - h} a${r},${r} 0 0 1 ${r},-${r} h${w - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${h - r} z`;
+}
+
+// items: [{label, value, tip, uid?}] — 已排序；每根 bar 都有端點值標籤，故不畫格線/刻度
+function vizHBar(items) {
+  if (!items.length) return '<p class="muted">尚無資料</p>';
+  const labelW = Math.max(...items.map(i => i.label.length)) * 14 + 16;
+  const W = 460, rowH = 30, barH = 18, valW = 66;
+  const H = items.length * rowH + 8;
+  const max = Math.max(...items.map(i => i.value), 1);
+  const plotW = W - labelW - valW;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  items.forEach((it, i) => {
+    const y = 4 + i * rowH, w = Math.max(Math.round(it.value / max * plotW), 0);
+    const click = it.uid ? ` style="cursor:pointer" onclick="openReport('/api/report/'+encodeURIComponent('${escapeHtml(it.uid)}'))"` : '';
+    s += `<rect x="0" y="${y - 2}" width="${W}" height="${rowH - 2}" fill="transparent" data-tip="${escapeHtml(it.tip || '')}"${click}/>`;
+    s += `<text x="${labelW - 8}" y="${y + barH / 2}" text-anchor="end" dominant-baseline="central" font-size="13" fill="${VIZ.ink}" ${it.uid ? 'text-decoration="underline"' : ''} pointer-events="none">${escapeHtml(it.label)}</text>`;
+    s += `<path d="${vizBarPath(labelW, y, w, barH)}" fill="${VIZ.bar}" pointer-events="none"/>`;
+    s += `<text x="${labelW + w + 6}" y="${y + barH / 2}" dominant-baseline="central" font-size="12" fill="${VIZ.muted}" style="font-variant-numeric:tabular-nums" pointer-events="none">${fmtN(it.value)}</text>`;
+  });
+  return s + '</svg>';
+}
+
+// 資產分布直方圖：級距自動放大到 ≤12 個 bin
+function vizHist(values) {
+  if (!values.length) return '<p class="muted">尚無資料</p>';
+  const max = Math.max(...values, 0);
+  let step = 500;
+  while (Math.floor(max / step) + 1 > 12) step += 500;
+  const nBins = Math.floor(max / step) + 1;
+  const bins = Array(nBins).fill(0);
+  values.forEach(v => bins[Math.floor(v / step)]++);
+  const W = 460, H = 190, padL = 8, padB = 26, plotH = H - padB - 20;
+  const bandW = (W - padL * 2) / nBins;
+  const colW = Math.min(24, bandW - 2);
+  const maxN = Math.max(...bins, 1);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  s += `<line x1="${padL}" y1="${H - padB}" x2="${W - padL}" y2="${H - padB}" stroke="${VIZ.grid}" stroke-width="1"/>`;
+  bins.forEach((n, i) => {
+    const x = padL + i * bandW + (bandW - colW) / 2;
+    const h = Math.round(n / maxN * plotH);
+    const y = H - padB - h;
+    const tip = `$${fmtN(i * step)}–${fmtN((i + 1) * step - 1)}・${n} 人`;
+    s += `<rect x="${padL + i * bandW}" y="0" width="${bandW}" height="${H - padB}" fill="transparent" data-tip="${tip}"/>`;
+    if (n > 0) {
+      s += `<path d="${vizColPath(x, y, colW, h)}" fill="${VIZ.bar}" pointer-events="none"/>`;
+      s += `<text x="${x + colW / 2}" y="${y - 5}" text-anchor="middle" font-size="11" fill="${VIZ.muted}" pointer-events="none">${n}</text>`;
+    }
+  });
+  const every = Math.ceil(nBins / 6);
+  for (let i = 0; i <= nBins; i += every) {
+    s += `<text x="${padL + i * bandW}" y="${H - padB + 15}" text-anchor="middle" font-size="10" fill="${VIZ.muted}" style="font-variant-numeric:tabular-nums">${fmtN(i * step)}</text>`;
+  }
+  return s + '</svg>';
+}
+
+function renderViz() {
+  if (!data) return;
+  const studs = data.students.filter(r => (r.tag || '學員') === '學員');
+  const sum = k => studs.reduce((a, r) => a + r[k], 0);
+  const tiles = [
+    ['學員數', studs.length], ['學員總資產', sum('asset')],
+    ['學員總積分', sum('points')], ['學員總天國點數', sum('kingdom_points')],
+    ['進行中公會任務', data.students.reduce((a, r) => a + r.guild_task_count, 0)],
+  ];
+  $('#vizStats').innerHTML = tiles.map(([l, v]) =>
+    `<div class="stat"><div class="l">${l}</div><div class="v">${fmtN(v)}</div></div>`).join('');
+
+  const byGroup = {};
+  studs.forEach(r => {
+    const g = r.group || '？';
+    const o = byGroup[g] || (byGroup[g] = { n: 0, asset: 0, points: 0 });
+    o.n++; o.asset += r.asset; o.points += r.points;
+  });
+  const groups = Object.entries(byGroup);
+  const gRows = key => groups
+    .map(([g, v]) => ({ label: `第${g}組`, value: v[key],
+      tip: `第${g}組・${v.n} 人・共 ${fmtN(v[key])}` }))
+    .sort((a, b) => b.value - a.value);
+  $('#vizGroupAsset').innerHTML = vizHBar(gRows('asset'));
+  $('#vizGroupPoints').innerHTML = vizHBar(gRows('points'));
+
+  const top = [...studs].sort((a, b) => b.points - a.points).slice(0, 10)
+    .filter(r => r.points > 0)
+    .map(r => ({ label: r.name, value: r.points, uid: r.uid,
+      tip: `${r.name}（${r.group ? '第' + r.group + '組' : '—'}）・積分 ${fmtN(r.points)}・KP ${fmtN(r.kingdom_points)}` }));
+  $('#vizTopPoints').innerHTML = top.length ? vizHBar(top) : '<p class="muted">還沒有人有積分</p>';
+
+  $('#vizAssetHist').innerHTML = vizHist(studs.map(r => r.asset));
+}
+
+document.addEventListener('mousemove', e => {
+  const tip = $('#vizTip'); if (!tip) return;
+  const t = e.target.closest ? e.target.closest('[data-tip]') : null;
+  if (t && t.dataset.tip) {
+    tip.style.display = 'block'; tip.textContent = t.dataset.tip;
+    tip.style.left = Math.min(e.clientX + 14, window.innerWidth - 220) + 'px';
+    tip.style.top = (e.clientY + 14) + 'px';
+  } else tip.style.display = 'none';
+});
+
 // ── 分頁 ──
 function showTab(t) {
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('show', p.id === t));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
   if (t === 'roster') loadRoster();
   if (t === 'awards') loadAwards();
+  if (t === 'viz') renderViz();
   if (intTimer) { clearInterval(intTimer); intTimer = null; }
   if (t === 'interest') { loadInterest(); intTimer = setInterval(loadInterest, 3000); }
 }
