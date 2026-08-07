@@ -151,6 +151,10 @@ def test_interest_tick():
 
 
 def test_market_close_then_settle():
+    fresh_state(day="D1")  # 非 D3 一律擋最終關市（D1 誤按防呆）
+    with S.begin() as s:
+        blocked = bank.market_close(s)
+    assert blocked["ok"] is False and "D3" in blocked["message"]
     fresh_state(day="D3"); add_student("G", 500)
     scan(uid="G", stall_id="bank", action="deposit", amount=100)  # bal 400, dep 100
     with S.begin() as s:
