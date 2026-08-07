@@ -173,12 +173,7 @@ def interest_dashboard(session) -> dict:
 def transfer(session, from_uid: str, to_uid: str, amount: int) -> dict:
     """服務三：兩學生一起找銀行，指定把錢從 A 轉到 B。無手續費、無金額上限。
     A（轉出方）金額 1:1 轉天國點數 + 0.5x 轉積分，算在 A 頭上（docx v2.3；積分
-    比例是給關主一個對外說法，天國點數本身不對外公告）。
-
-    2026-08-07 停用：轉出獎勵被學員拿來互轉鑄分（錢繞一圈回來、KP/積分白拿），
-    D1 下午出現兩波，總控決定全面關閉轉帳。要恢復刪掉下面這個 return 即可。"""
-    return {"ok": False, "message": "轉帳功能已停用"}
-
+    比例是給關主一個對外說法，天國點數本身不對外公告）。"""
     st = get_state(session)
     if not st.market_open:
         return {"ok": False, "message": "市場已關閉，僅能查詢"}
