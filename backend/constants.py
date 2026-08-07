@@ -64,8 +64,8 @@ WITNESS_KP = 100
 BET_MIN, BET_MAX = 10, 500   # v2.11 上限 100→500（加開 200/500 檔）
 DICE_PAYOUT = {"big": 2, "small": 2, "seven": 5}  # 命中 balance += amount × payout（含退本金）
 
-# Day1 賣娃娃固定三檔
-DOLL_PRICES = {"大": 500, "中": 300, "小": 100}
+# Day1 賣娃娃固定四檔
+DOLL_PRICES = {"特大": 500, "大": 300, "中": 200, "小": 100}
 
 # 起始金（才幹 5/2/1，非隨機：每組固定 1 人 5000、2 人 1000、其餘全部 2000）
 SEED_OPTIONS = {5000, 2000, 1000}

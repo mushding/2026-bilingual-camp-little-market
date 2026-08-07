@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["DATABASE_URL"] = "sqlite://"
 
 import db  # noqa: E402
-from sqlalchemy import StaticPool, create_engine  # noqa: E402
+from sqlalchemy import StaticPool, create_engine, select  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 db.engine = create_engine("sqlite://", connect_args={"check_same_thread": False},
@@ -54,7 +54,7 @@ def test_roster_flow():
         html = roster.qr_sheet(s)
         assert "<svg" in html and "李小華" in html
 
-    # 解綁：無交易可解（身分保留、只清 card_uid）、有交易拒絕
+    # 解綁：身分保留、只清 card_uid；有交易也可解（歷史掛 uid，換卡不掉帳）
     with S.begin() as s:
         li_uid = next(e["uid"] for e in roster.list_all(s)["entries"] if e["name"] == "李小華")
         assert roster.unbind(s, li_uid)["ok"]
@@ -62,7 +62,13 @@ def test_roster_flow():
         assert s.get(models.Student, li_uid).card_uid is None
         assert roster.bind(s, li_uid, UID)["ok"]  # 重綁回來
         handle_scan(s, ScanReq(uid=UID, stall_id="grocery", action="debit", amount=10))
-        assert not roster.unbind(s, li_uid)["ok"]  # 已有交易 → 拒絕
+        bal = s.get(models.Student, li_uid).balance
+        assert roster.unbind(s, li_uid)["ok"]  # 有交易仍可解綁
+        assert roster.bind(s, li_uid, "04:99:99:99:99:99:99")["ok"]  # 換新卡
+        stu = s.get(models.Student, li_uid)
+        assert stu.balance == bal  # 餘額與歷史不受影響
+        assert s.scalars(select(models.Transaction).where(
+            models.Transaction.uid == li_uid)).first() is not None
 
     # 改組別
     with S.begin() as s:

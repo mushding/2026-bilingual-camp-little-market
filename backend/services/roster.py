@@ -95,15 +95,13 @@ def set_seed(s, uid: str, seed_amount: int) -> dict:
 
 
 def unbind(s, uid: str) -> dict:
-    """解綁（營會前修正用）：清 card_uid，身分保留。已有交易紀錄則拒絕。"""
+    """解綁（換卡/補卡用）：清 card_uid，身分保留。
+    交易歷史掛在內部 uid，不掛卡號——解綁再重綁新卡，餘額/積分/歷史全保留。"""
     stu = s.get(Student, uid)
     if stu is None:
         return {"ok": False, "message": "查無此名單項目"}
     if not stu.card_uid:
         return {"ok": False, "message": f"{stu.name} 尚未綁卡"}
-    txn = s.scalars(select(Transaction).where(Transaction.uid == uid).limit(1)).first()
-    if txn:
-        return {"ok": False, "message": f"{stu.name} 已有交易紀錄，不可解綁"}
     old = stu.card_uid
     stu.card_uid = None
     return {"ok": True, "uid": stu.uid, "name": stu.name, "unbound_card_uid": old}
