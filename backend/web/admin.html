@@ -649,7 +649,7 @@ function rosterEntryName(id) {
 
 async function rosterUnbind(id) {
   const name = rosterEntryName(id);
-  if (!confirm(`解綁 ${name} 的卡片？（會刪除該學生帳戶；已有交易則不可解綁）`)) return;
+  if (!confirm(`解綁 ${name} 的卡片？（身分/餘額/交易歷史保留，之後可綁新卡）`)) return;
   try { const r = await api('/api/admin/roster/unbind', post({ uid: id }));
         toast(r.ok ? `已解綁 ${name}` : r.message, !r.ok); await loadRoster(); }
   catch (e) { toast(e.message, true); }

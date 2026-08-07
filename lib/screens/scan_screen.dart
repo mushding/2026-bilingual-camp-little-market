@@ -237,13 +237,13 @@ class _ScanScreenState extends State<ScanScreen> {
         amount = v;
         break;
       case TxnType.day1RingToss:
-        final n = await showAmountInput(context, title: '中圈數 (0–10)', max: 10, hint: '中幾圈');
+        final n = await showAmountInput(context, title: '中圈數 (0–10)', min: 0, max: 10, hint: '中幾圈');
         if (n == null) return;
         cost = 100;
         reward = (n < 0 ? 0 : n) * 100;
         break;
       case TxnType.day1Dart:
-        final n = await showAmountInput(context, title: '命中數 (0–10)', max: 10, hint: '命中幾鏢');
+        final n = await showAmountInput(context, title: '命中數 (0–10)', min: 0, max: 10, hint: '命中幾鏢');
         if (n == null) return;
         cost = 100;
         reward = (n < 0 ? 0 : n) * 20;

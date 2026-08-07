@@ -39,12 +39,9 @@ class _AmountSheetState extends State<_AmountSheet> {
 
   void _submit() {
     final v = int.tryParse(_c.text.trim());
-    if (v == null || v <= 0) {
-      setState(() => _err = '請輸入正整數');
-      return;
-    }
-    if (widget.min != null && v < widget.min!) {
-      setState(() => _err = '不可小於 ${widget.min}');
+    final lo = widget.min ?? 1; // 預設仍要求正整數；min: 0 的輸入（如中 0 圈）放行
+    if (v == null || v < lo) {
+      setState(() => _err = lo <= 0 ? '請輸入 $lo 以上的整數' : '請輸入正整數');
       return;
     }
     if (widget.max != null && v > widget.max!) {
