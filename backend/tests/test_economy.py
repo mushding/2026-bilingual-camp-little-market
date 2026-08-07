@@ -280,41 +280,16 @@ def test_donate_no_floor():
     assert r0["ok"] is False  # 0 元仍擋
 
 
-def test_bank_transfer():
+def test_bank_transfer_disabled():
+    # 2026-08-07 全面停用：轉出獎勵被互轉鑄分，任何轉帳一律拒絕、不動任何帳
     fresh_state(); add_student("TA", 500); add_student("TB", 100)
     with S.begin() as s:
         out = bank.transfer(s, "TA", "TB", 200)
-    assert out["ok"] is True and out["from"]["balance"] == 300 and out["to"]["balance"] == 300
-    assert out["from"]["kingdom_points"] == 200  # A 金額 1:1 轉天國點數
-    assert out["from"]["points"] == 100  # 同時 0.5x 轉積分
+    assert out["ok"] is False and "停用" in out["message"]
     with S.begin() as s:
-        bad_self = bank.transfer(s, "TA", "TA", 10)
-    assert bad_self["ok"] is False
-    with S.begin() as s:
-        bad_insufficient = bank.transfer(s, "TB", "TA", 99999)
-    assert bad_insufficient["ok"] is False
-    fresh_state()  # market_open=1 預設，先關市場再測試阻擋
-    with S.begin() as s:
-        s.query(models.GameState).delete()
-        s.add(models.GameState(id=1, current_day="D2", market_open=0,
-                               settlement_count=0, settled_days="[]"))
-    with S.begin() as s:
-        blocked = bank.transfer(s, "TA", "TB", 10)
-    assert blocked["ok"] is False
-
-
-def test_bank_transfer_coach_to_student_blocked():
-    fresh_state()
-    add_student("CO", 2000, tag="輔導")
-    add_student("ST", 500)
-    add_student("CO2", 2000, tag="輔導")
-    with S.begin() as s:
-        blocked = bank.transfer(s, "CO", "ST", 100)
-    assert blocked["ok"] is False and "輔導" in blocked["message"]
-    with S.begin() as s:  # 學員→輔導、輔導→輔導 仍允許
-        up = bank.transfer(s, "ST", "CO", 100)
-        cc = bank.transfer(s, "CO", "CO2", 100)
-    assert up["ok"] is True and cc["ok"] is True
+        a = s.get(models.Student, "TA"); b = s.get(models.Student, "TB")
+        assert a.balance == 500 and a.points == 0 and a.kingdom_points == 0
+        assert b.balance == 100
 
 
 def test_topic1_group_credit():
