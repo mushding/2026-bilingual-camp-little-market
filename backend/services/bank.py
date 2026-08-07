@@ -187,6 +187,9 @@ def transfer(session, from_uid: str, to_uid: str, amount: int) -> dict:
     src, dst = locked[from_uid], locked[to_uid]
     if src is None or dst is None:
         return {"ok": False, "message": "查無此卡"}
+    # 輔導帳戶不得轉帳給學員：轉出方 1:1 KP + 0.5x 積分的獎勵會被拿來替學員鑄分
+    if src.tag == "輔導" and dst.tag == "學員":
+        return {"ok": False, "message": "輔導不可轉帳給學員"}
     if src.balance < amount:
         return {"ok": False, "message": f"餘額不足（需 ${amount}，有 ${src.balance}）"}
     gained_points = amount // 2

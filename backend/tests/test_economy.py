@@ -35,12 +35,12 @@ def fresh_state(market_open=1, day="D2"):
                                settlement_count=0, settled_days="[]"))
 
 
-def add_student(uid, seed=500, group=None):
+def add_student(uid, seed=500, group=None, tag="學員"):
     with S.begin() as s:
         if s.get(models.Student, uid):
             return
         s.add(models.Student(uid=uid, card_uid=uid, name="測試", seed_amount=seed,
-                            balance=seed, group=group))
+                            balance=seed, group=group, tag=tag))
 
 
 def scan(**kw):
@@ -301,6 +301,20 @@ def test_bank_transfer():
     with S.begin() as s:
         blocked = bank.transfer(s, "TA", "TB", 10)
     assert blocked["ok"] is False
+
+
+def test_bank_transfer_coach_to_student_blocked():
+    fresh_state()
+    add_student("CO", 2000, tag="輔導")
+    add_student("ST", 500)
+    add_student("CO2", 2000, tag="輔導")
+    with S.begin() as s:
+        blocked = bank.transfer(s, "CO", "ST", 100)
+    assert blocked["ok"] is False and "輔導" in blocked["message"]
+    with S.begin() as s:  # 學員→輔導、輔導→輔導 仍允許
+        up = bank.transfer(s, "ST", "CO", 100)
+        cc = bank.transfer(s, "CO", "CO2", 100)
+    assert up["ok"] is True and cc["ok"] is True
 
 
 def test_topic1_group_credit():
