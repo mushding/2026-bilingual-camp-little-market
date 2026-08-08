@@ -150,7 +150,7 @@
     </div>
     <div class="card">
       <h3>全體扣餐費 meal_charge_all（D2 晚餐 / D3 午餐）</h3>
-      <p>不擺攤的餐：一鍵對所有已綁卡學員統一扣主餐錢。餘額不足者只扣到 0（餐照供）。
+      <p>不擺攤的餐：一鍵對所有已綁卡學員統一扣主餐錢。餘額不足者照扣、可為負（餐照供；負債者除公會外攤位拒收）。
          加價購（起士片/豆乾）不在這裡——由收費同工在 App 餐費攤逐人掃卡點品項。</p>
       <div class="row">
         <button class="warn" onclick="mealChargeAll(180, 'D2 晚餐：經典肉醬義大利麵套餐')">🍝 D2 晚餐 義大利麵套餐 $180</button>
@@ -684,7 +684,7 @@ async function mealChargeAll(preset, label) {
   const amt = preset || parseInt($('#mealAmt').value, 10);
   if (!amt || amt <= 0) { toast('請輸入金額', true); return; }
   const what = label ? `【${label}】` : '';
-  if (!confirm(`🍱 全體扣餐費${what}？所有已綁卡學員每人扣 $${amt}，餘額不足者只扣到 0。\n\n確定執行？`)) return;
+  if (!confirm(`🍱 全體扣餐費${what}？所有已綁卡學員每人扣 $${amt}，餘額不足者照扣、餘額會變負（要到公會賺回）。\n\n確定執行？`)) return;
   try {
     const r = await api('/api/admin/meal_charge_all', post({ amount: amt }));
     await poll();
