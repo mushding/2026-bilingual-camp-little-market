@@ -24,9 +24,10 @@ def _local(ts: str) -> str:
     return dt.strftime("%m-%d %H:%M")
 
 # 入帳類 / 出帳類 action 分類（casino_bet/cancel 排除：只是凍結/退款，僅影響餘額曲線）
-INCOME_ACTIONS = {"credit", "guild_complete", "interest", "transfer_in", "topic1_credit"}
-EXPENSE_ACTIONS = {"debit", "meal", "donate", "exchange_points", "guild_draw", "task_expired",
-                   "transfer_out"}
+# v2.15：轉帳（純移轉）與積分兌換（現金→積分轉換）不計收入/花費，
+# 避免互轉刷「最會賺錢/刺激經濟」、換積分灌花費。
+INCOME_ACTIONS = {"credit", "guild_complete", "interest", "topic1_credit"}
+EXPENSE_ACTIONS = {"debit", "meal", "donate", "guild_draw", "task_expired"}
 KP_ACTIONS = {"donate", "credit_kp", "mail_kp", "transfer_out"}
 
 # stall_id → 中文攤位名（對齊 lib/data/stalls.dart）
@@ -85,8 +86,8 @@ def build_data(session, uid: str) -> dict | None:
             total_income += abs(t.amount)
         elif a in EXPENSE_ACTIONS:
             total_expense += abs(t.amount)
-            if a == "exchange_points":
-                exchanged_points += meta.get("points", 0)
+        elif a == "exchange_points":  # 不計花費，仍統計已兌換積分
+            exchanged_points += meta.get("points", 0)
         elif a == "market_close":
             residual = t.amount  # 折算進積分的部分
 

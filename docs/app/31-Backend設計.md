@@ -340,7 +340,7 @@ GET /api/report/all              # 批次：產所有人 HTML（zip 或逐頁）
 | 欄位 | 計算 |
 |---|---|
 | `total_income` | Σ amount of credit / **game_settle `meta.reward`** / guild_complete / interest / **賭場淨彩金（payout − 原始 bet 本金，不含退回本金）**。賭場以淨輸贏入帳，避免把整筆 payout（含退回本金）計入而灌大毛額 |
-| `total_expense` | Σ |amount| of debit / **meal（餐費）** / **game_settle `meta.cost`（固定 100）** / donate / exchange / casino lose / task_expired 罰款 100（deposit 不計；guild_draw 免手續費不計入） |
+| `total_expense` | Σ |amount| of debit / **meal（餐費）** / **game_settle `meta.cost`（固定 100）** / donate / casino lose / task_expired 罰款 100（deposit 不計；guild_draw 免手續費不計入；v2.15 起 **transfer_out（純移轉）與 exchange_points（換積分）不計**，transfer_in 同不計收入） |
 | `roi_pct`（建議直觀版） | `(total_income − total_expense) / seed × 100`，另列「最終總積分」「總 KP」獨立呈現 |
 | `kingdom_points`（總 KP） | Σ KP 類交易：`donate` / `credit_kp`（聽見證 +100）/ **`mail_kp`（郵政感謝卡核銷 +100×n）**。買感謝卡的 `debit` 不加 KP（已改郵政核銷）；回應卡已取消 |
 
