@@ -50,6 +50,8 @@ ACTION_NAMES = {
     "game_settle": "遊戲結算", "casino_bet": "參與遊戲", "casino_payout": "遊戲獎金",
     "casino_cancel": "退還遊戲金", "credit_kp": "天國點數", "mail_kp": "感謝卡核銷",
     "task_expired": "任務逾時", "market_close": "市場結算折現",
+    "interest_tick": "利息計算",
+    "adjust_transfer_points": "積分補正（轉帳回收）", "adjust_transfer_kp": "KP 補正（轉帳回收）",
     "transfer_out": "轉帳轉出", "transfer_in": "轉帳轉入",
     "topic1_credit": "主題一：闖關獎金",
 }
