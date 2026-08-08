@@ -29,12 +29,13 @@ GAMES = {
     "game_tangram": ("七巧板", "high", 300),
 }
 # 公會抽取池 = 上 9 個 game_key。加權隨機（v2.5）：一對一、難 scale 的關
-# （終極密碼/比手畫腳/記憶翻牌）權重 1，其餘可一對多的關權重 2，降低塞車。
+# 權重 1，其餘可一對多的關權重 2，降低塞車。
+# v2.17：比手畫腳 1→2、七巧板 2→1（現場實況調整）。
 GUILD_POOL = list(GAMES.keys())
 GUILD_WEIGHTS = {
     "game_password": 1,   # 終極密碼：一次只能一關主對一學生
-    "game_charades": 1,   # 比手畫腳：同上
     "game_memory": 1,     # 記憶翻牌：同上
+    "game_tangram": 1,    # 七巧板：v2.17 降權
 }  # 其餘預設 2
 GUILD_WEIGHT_DEFAULT = 2
 # game_key -> stall_id（pending 反查用）
