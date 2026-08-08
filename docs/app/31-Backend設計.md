@@ -85,7 +85,7 @@ class ScanReq(BaseModel):
 |---|---|---|
 | `lookup` | 回 StudentState | 學生不存在 → ok=false |
 | `debit` | balance -= amount（雜貨店含感謝卡商品，**純扣款、不加任何 KP**） | amount>0、balance≥amount、market_open |
-| `meal` | balance -= amount（餐費，預設150、範圍100–250）。計入 `total_expense` | amount>0、balance≥amount、market_open |
+| `meal` | balance -= amount（餐費，預設150、範圍100–250）。計入 `total_expense`。**可扣到負**（v2.16）；餘額為負後除公會（guild_draw/guild_complete）、lookup、meal、withdraw、credit_kp/mail_kp 外一律拒收 | amount>0（不檢查餘額、不需 market_open） |
 | `mail_kp` | 郵政核銷：依 `uid`（或 `sender_name` 反查）對**寄件人** kingdom_points += 100×cards；`card_count += cards`（**不限張數**，僅計數） | cards≥1；name 反查需唯一命中（同名→回候選清單由 App 選定 uid）；不需 market_open（核銷可在關市後整理） |
 | `credit` | balance += amount | amount>0 |
 | `game_settle` | balance -= cost；若 reward>0 則 balance += reward（單交易原子）。**transaction.meta 必存 `{cost, reward}`**，供報表分別計入 expense（cost）與 income（reward） | cost≤balance；D1 攤專用 |

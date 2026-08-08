@@ -100,6 +100,12 @@ def write_txn(session, s: Student, stall: str, action: str, amount: int,
 NEEDS_MARKET = {"debit", "credit", "game_settle", "deposit", "withdraw",
                 "donate", "exchange_points", "guild_draw"}
 
+# 餘額為負時擋掉的攤位交易（v2.16：餐費可扣到負；欠債只能靠公會賺回來。
+# 放行：lookup／guild_draw／guild_complete／meal（照收）／withdraw（提自己的定存）
+# ／credit_kp、mail_kp（KP 不是錢錢））
+NEGATIVE_BLOCKED = {"debit", "credit", "game_settle", "deposit",
+                    "donate", "exchange_points"}
+
 
 def handle_scan(session, req) -> StudentState:
     """POST /api/scan 主入口。req: ScanReq。整段已在 session.begin() 內。"""
@@ -118,18 +124,26 @@ def handle_scan(session, req) -> StudentState:
 
     a = req.action
 
+    if s.balance < 0 and a in NEGATIVE_BLOCKED:
+        return state_to_out(s, req.stall_id, a,
+                            f"餘額為負（${s.balance}），請先到公會接任務賺錢", ok=False)
+
     if a == "lookup":
         return state_to_out(s, req.stall_id, a, "查詢成功")
 
     if a in ("debit", "meal"):
         if req.amount <= 0:
             return state_to_out(s, req.stall_id, a, "金額需 > 0", ok=False)
-        if s.balance < req.amount:
+        if a == "debit" and s.balance < req.amount:
             return state_to_out(s, req.stall_id, a, f"餘額不足（需 ${req.amount}，有 ${s.balance}）", ok=False)
+        # meal 不擋餘額：餐一定要吃，扣到負；負債後除公會外攤位不再受理
         s.balance -= req.amount
         write_txn(session, s, req.stall_id, a, -req.amount, day)
         label = "付餐費" if a == "meal" else "付款"
-        return state_to_out(s, req.stall_id, a, f"學員{label} ${req.amount}")
+        msg = f"學員{label} ${req.amount}"
+        if s.balance < 0:
+            msg += f"（餘額 ${s.balance}，需到公會接任務賺錢）"
+        return state_to_out(s, req.stall_id, a, msg)
 
     if a == "credit":
         if req.amount <= 0:

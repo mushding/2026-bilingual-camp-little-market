@@ -112,6 +112,24 @@ def test_meal_ignores_market_closed():
     assert scan(uid="MM", stall_id="grocery", action="debit", amount=10)["ok"] is False  # 其它照擋
 
 
+def test_meal_can_go_negative_then_guild_only():
+    fresh_state(); add_student("NG", 100)
+    out = scan(uid="NG", stall_id="meal", action="meal", amount=150)  # 餐費照收 → -50
+    assert out["ok"] is True and out["balance"] == -50
+    # 負餘額：一般攤全擋（含入帳），公會/查詢/餐費照常
+    assert scan(uid="NG", stall_id="grocery", action="debit", amount=10)["ok"] is False
+    assert scan(uid="NG", stall_id="grocery", action="credit", amount=10)["ok"] is False
+    assert scan(uid="NG", stall_id="day1_ring", action="game_settle", cost=100, reward=0)["ok"] is False
+    assert scan(uid="NG", stall_id="exchange", action="exchange_points", tier=100)["ok"] is False
+    assert scan(uid="NG", stall_id="x", action="lookup")["ok"] is True
+    assert scan(uid="NG", stall_id="meal", action="meal", amount=80)["balance"] == -130
+    draw = scan(uid="NG", stall_id="guild", action="guild_draw", amount=1)
+    assert draw["ok"] is True  # 公會可接任務
+    game_key = draw["pending_tasks"][0]["game_key"]
+    done = scan(uid="NG", stall_id=game_key, action="guild_complete", staff_uid="ST1")
+    assert done["ok"] is True and done["balance"] > -130  # 賺回來了
+
+
 def test_tag_excludes_non_students_from_awards():
     fresh_state(); add_student("TS", 500); add_student("TC", 500)
     from services import report as report_svc
@@ -180,15 +198,15 @@ def test_meal_charge_all():
     with S.begin() as s:  # 清掉其他測試留下的學員（bulk 扣全體，需乾淨名單）
         s.query(models.Student).delete()
     add_student("M1", 500)
-    add_student("M2", 60)   # 不足，只扣到 0
-    add_student("M3", 0)    # 沒錢，跳過但列入不足
+    add_student("M2", 60)   # 不足，照扣轉負（v2.16）
+    add_student("M3", 0)    # 沒錢，照扣轉負
     with S.begin() as s:
         r = bank.meal_charge_all(s, 100)
-    assert r["ok"] is True and r["count"] == 2 and r["total"] == 160 and r["short"] == 2
+    assert r["ok"] is True and r["count"] == 3 and r["total"] == 300 and r["negative"] == 2
     with S.begin() as s:
         assert s.get(models.Student, "M1").balance == 400
-        assert s.get(models.Student, "M2").balance == 0
-        assert s.get(models.Student, "M3").balance == 0
+        assert s.get(models.Student, "M2").balance == -40
+        assert s.get(models.Student, "M3").balance == -100
     with S.begin() as s:
         bad = bank.meal_charge_all(s, 0)
     assert bad["ok"] is False

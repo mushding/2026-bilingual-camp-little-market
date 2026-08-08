@@ -205,27 +205,24 @@ def transfer(session, from_uid: str, to_uid: str, amount: int) -> dict:
 
 def meal_charge_all(session, amount: int) -> dict:
     """全體扣餐費（D2 晚餐／D3 午餐不擺攤，總控輸入單價一鍵統一扣）。
-    只扣已綁卡學員；餘額不足者扣到 0（餐照供，保證水槽——不是沒錢就沒飯）。
+    只扣已綁卡學員；v2.16 起餘額不足照扣、可為負（負債者除公會外攤位拒收）。
     不檢查 market_open：通常在當日截止後才收餐費，屬總控權限。"""
     if amount <= 0:
         return {"ok": False, "message": "金額需 > 0"}
     st = get_state(session)
-    count, total, short = 0, 0, 0
+    count, total, negative = 0, 0, 0
     for s in session.scalars(select(Student).where(Student.card_uid.is_not(None))):
-        charged = min(amount, s.balance)
-        if charged < amount:
-            short += 1
-        if charged <= 0:
-            continue
-        s.balance -= charged
-        write_txn(session, s, "meal", "meal", -charged, st.current_day,
+        s.balance -= amount
+        if s.balance < 0:
+            negative += 1
+        write_txn(session, s, "meal", "meal", -amount, st.current_day,
                   {"bulk": True, "asked": amount})
         count += 1
-        total += charged
+        total += amount
     msg = f"全體扣餐費 ${amount}：{count} 人共扣 ${total}"
-    if short:
-        msg += f"（{short} 人餘額不足，只扣到 0）"
-    return {"ok": True, "message": msg, "count": count, "total": total, "short": short}
+    if negative:
+        msg += f"（{negative} 人餘額轉負，需至公會賺回）"
+    return {"ok": True, "message": msg, "count": count, "total": total, "negative": negative}
 
 
 def market_close(session) -> dict:
