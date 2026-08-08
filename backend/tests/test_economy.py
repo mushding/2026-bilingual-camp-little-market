@@ -290,7 +290,7 @@ def test_bank_transfer():
         out = bank.transfer(s, "TA", "TB", 200)
     assert out["ok"] is True and out["from"]["balance"] == 300 and out["to"]["balance"] == 300
     assert out["from"]["kingdom_points"] == 200  # A 金額 1:1 轉天國點數
-    assert out["from"]["points"] == 100  # 同時 0.5x 轉積分
+    assert out["from"]["points"] == 0  # v2.14 起轉帳不再加積分（只加 KP）
     with S.begin() as s:
         bad_self = bank.transfer(s, "TA", "TA", 10)
     assert bad_self["ok"] is False

@@ -261,6 +261,6 @@ ScanScreen
 
 ## 附錄：交易字串 / action 對照
 
-`Day1賣娃娃`（固定四檔）、`Day1套圈圈`、`Day1射飛鏢`、`Day1麻將賓果`、`銀行`(lookup/deposit/withdraw/transfer，**轉出方 1:1 拿 KP + 0.5x 拿積分**)、`分享見證`(credit_kp +100)、`舊鞋救命`(debit + credit_kp + credit_points 0.5x，無下限)、`積分`(debit + credit_points)、`雜貨店`(**純 debit，不加 KP**)、`郵政`(mail_kp，名字搜尋寄件人 +100×n KP)、`餐費`(meal debit，約150)、`賭場10點半`、`賭場大小骰子`、`公會`(抽取，**免手續費**，指定 N)、`顏色分類`、`終極密碼`、`搬家人工`、`疊杯子`、`丟紙飛機`、`拍氣球`、`比手畫腳`、`記憶翻牌`、`七巧板`（後 9 款：lookup / complete 固定獎勵）。
+`Day1賣娃娃`（固定四檔）、`Day1套圈圈`、`Day1射飛鏢`、`Day1麻將賓果`、`銀行`(lookup/deposit/withdraw/transfer，**轉出方 1:1 拿 KP，不加積分**)、`分享見證`(credit_kp +100)、`舊鞋救命`(debit + credit_kp + credit_points 0.5x，無下限)、`積分`(debit + credit_points)、`雜貨店`(**純 debit，不加 KP**)、`郵政`(mail_kp，名字搜尋寄件人 +100×n KP)、`餐費`(meal debit，約150)、`賭場10點半`、`賭場大小骰子`、`公會`(抽取，**免手續費**，指定 N)、`顏色分類`、`終極密碼`、`搬家人工`、`疊杯子`、`丟紙飛機`、`拍氣球`、`比手畫腳`、`記憶翻牌`、`七巧板`（後 9 款：lookup / complete 固定獎勵）。
 
 > 後端沿用現有 `POST /api/scan {uid,stall_id,action,amount}`；新增 action：`deposit`、`withdraw`、`credit_kp`、`credit_points`、`meal`（餐費 debit）、`mail_kp`（郵政感謝卡核銷，by-name，+100×n KP）、`complete`（公會固定獎勵）。郵政另需 `GET /api/students/search?name=`（by-name 反查）。銀行轉帳走獨立的 `POST /api/bank/transfer {from_uid,to_uid,amount}`，不經 `/api/scan`。所有 state 入後端 DB、原子交易、UID-lookup、**卡片不寫入**。
