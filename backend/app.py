@@ -440,16 +440,17 @@ async def admin_import(file: UploadFile):
 
 # ── 報表 ────────────────────────────────────────────────────────────────
 @app.get("/api/report/all/print", response_class=HTMLResponse)
-def report_all_print(compact: bool = Query(False)):
+def report_all_print(compact: bool = Query(False), duplex: bool = Query(False)):
     """全部學生成績單一份 HTML（每人一張，page-break）。瀏覽器 Ctrl+P → 存 PDF/印。
-    compact=true → 省紙版（A5，密度加大），同樣內容約省一半紙張面積。"""
+    compact=true → 省紙版（A4 橫放兩人並排）。
+    duplex=true → 雙面列印版（每人從新一張正面起，同學員同張紙）。"""
     from sqlalchemy import select
     from models import Student
     with ReadSessionLocal() as s:
         uids = s.scalars(select(Student).where(Student.card_uid.is_not(None))
                         .order_by(Student.final_rank_points, Student.name)).all()
         datas = [report.build_data(s, x.uid) for x in uids]
-        return report.render_all([d for d in datas if d], compact=compact)
+        return report.render_all([d for d in datas if d], compact=compact, duplex=duplex)
 
 
 @app.get("/api/report/awards/print", response_class=HTMLResponse)

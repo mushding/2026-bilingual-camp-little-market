@@ -446,14 +446,24 @@ def _pair_bodies(datas: list[dict]) -> str:
     return "".join(sheets)
 
 
-def render_all(datas: list[dict], compact: bool = False) -> str:
+# 雙面列印版：每位學生從新一張紙的「正面」（奇數頁）開始，內容長的溢到同張背面，
+# 不會跟下一位擠同一張。單面內容的學生背面自動留白（省紙靠雙面，不是靠排版壓縮）。
+_DUPLEX_STYLE = """
+.page + .page { page-break-before:right; break-before:right; }
+"""
+
+
+def render_all(datas: list[dict], compact: bool = False, duplex: bool = False) -> str:
     """批次列印：每位學生一張（page-break）。瀏覽器 Ctrl+P 直接印或存 PDF。
-    compact=True → 省紙版，一張 A4 橫放並排印兩人，同樣內容約省一半紙張。"""
+    compact=True → 省紙版，一張 A4 橫放並排印兩人，同樣內容約省一半紙張。
+    duplex=True → 雙面列印版：每人固定從新一張正面起，同學員內容同張紙。"""
     if not datas:
         return _wrap("小市集成績單（批次）", '<p style="padding:20px">尚無學生資料</p>')
     body = _pair_bodies(datas) if compact else "".join(_render_body(d) for d in datas)
-    title = f"小市集成績單批次（{len(datas)} 人{'・省紙版' if compact else ''}）"
-    return _wrap(title, body, _COMPACT_STYLE if compact else "")
+    tag = "・省紙版" if compact else ("・雙面版" if duplex else "")
+    title = f"小市集成績單批次（{len(datas)} 人{tag}）"
+    extra = _COMPACT_STYLE if compact else (_DUPLEX_STYLE if duplex else "")
+    return _wrap(title, body, extra)
 
 
 # ── 頒獎典禮投影片（16:9 橫式，每項一頁，瀏覽器 Ctrl+P → 存 PDF 上台用） ──────
