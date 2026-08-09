@@ -342,8 +342,6 @@ def dashboard(session) -> dict:
 def awards(session) -> dict:
     """頒獎榜：積分榜/管家榜前三名 + 最會賺錢／勤奮工作／刺激經濟三個單一得主。
     即時算，不寫回任何欄位（可以在任何時間點按，重複按結果一樣只是即時值）。"""
-    from services.report import bulk_expense_income
-
     # 只有 tag=學員 進頒獎榜；輔導/測試帳號玩歸玩，不佔名次
     studs = session.scalars(select(Student).where(
         Student.card_uid.is_not(None), Student.tag == "學員")).all()
@@ -375,9 +373,13 @@ def awards(session) -> dict:
             if match:
                 hardest_worker = brief(match, count=completed[top_uid])
 
-    inc_exp = bulk_expense_income(session)
-    spender = max(studs, key=lambda x: inc_exp.get(x.uid, (0, 0))[1])
-    spender_expense = inc_exp.get(spender.uid, (0, 0))[1]
+    # 刺激經濟獎（v2.19）：只計雜貨店消費，不含攤位/餐費/賭場等其他支出
+    grocery: dict[str, int] = {}
+    for t in session.scalars(select(Transaction).where(
+            Transaction.action == "debit", Transaction.stall_id == "grocery")):
+        grocery[t.uid] = grocery.get(t.uid, 0) - t.amount  # amount 為負
+    spender = max(studs, key=lambda x: grocery.get(x.uid, 0))
+    spender_expense = grocery.get(spender.uid, 0)
 
     return {
         "points_top3": [brief(s, points=s.points) for s in points_top3],

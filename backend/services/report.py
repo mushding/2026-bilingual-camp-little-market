@@ -567,7 +567,7 @@ def render_award_slides(a: dict) -> str:
     sp = a.get("big_spender")
     slides.append(_teaser_slide("🎉 頒獎", "刺激經濟獎"))
     slides.append(_winner_slide("🎉 頒獎", "刺激經濟獎", sp,
-                                f'總花費 ${sp["expense"]}' if sp else "", "purple"))
+                                f'雜貨店消費 ${sp["expense"]}' if sp else "", "purple"))
 
     points_top3 = a.get("points_top3") or []
     for rank in (3, 2, 1):
