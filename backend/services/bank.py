@@ -358,12 +358,20 @@ def awards(session) -> dict:
     points_top3 = sorted(studs, key=lambda x: x.points, reverse=True)[:3]
     kp_top3 = sorted(studs, key=lambda x: x.kingdom_points, reverse=True)[:3]
 
-    # 最會賺錢（v2.21）：改用帳本總收入（公會/攤位獎金/利息/主題一；轉帳已剔除）。
-    # 舊算法 (現金+定存)−起始金 在 settle_final 歸零後會變 −seed，錯頒給起始金最小者。
-    from services.report import bulk_expense_income
-    inc_exp = bulk_expense_income(session)
-    earner = max(studs, key=lambda x: inc_exp.get(x.uid, (0, 0))[0])
-    earner_diff = inc_exp.get(earner.uid, (0, 0))[0]
+    # 最會賺錢（v2.21）：帳本總收入（公會/攤位獎金/利息/主題一；轉帳已剔除）。
+    # v2.22：不算賭攤 — casino_payout 贏錢不計入（賭運不是賺錢本事）。
+    from services.report import INCOME_ACTIONS
+    earn: dict[str, int] = {}
+    for t in session.scalars(select(Transaction)):
+        if t.action == "game_settle":
+            gained = json.loads(t.meta or "{}").get("reward", 0)
+        elif t.action in INCOME_ACTIONS:
+            gained = abs(t.amount)
+        else:
+            continue
+        earn[t.uid] = earn.get(t.uid, 0) + gained
+    earner = max(studs, key=lambda x: earn.get(x.uid, 0))
+    earner_diff = earn.get(earner.uid, 0)
 
     completed: dict[str, int] = {}
     stud_uids = {x.uid for x in studs}
