@@ -446,11 +446,32 @@ def _pair_bodies(datas: list[dict]) -> str:
     return "".join(sheets)
 
 
-# 雙面列印版：每位學生從新一張紙的「正面」（奇數頁）開始，內容長的溢到同張背面，
-# 不會跟下一位擠同一張。單面內容的學生背面自動留白（省紙靠雙面，不是靠排版壓縮）。
+# 雙面列印版：每位學生從新一張紙的「正面」（奇數頁）開始，內容長的溢到同張/下張
+# 背面之外，不與下一位混張。Chrome 的 break-before:right 不可靠（3 頁者會讓後面
+# 全部錯位），改用 JS 量測每人佔幾頁、奇數頁者後面補一頁空白，奇偶永遠對齊。
+# body 鎖成紙寬，讓螢幕量測高度 ≈ 列印分頁高度。
 _DUPLEX_STYLE = """
-.page + .page { page-break-before:right; break-before:right; }
+.page + .page, .blankpage { page-break-before:always; break-before:page; }
+.blankpage { height:1px; }
+body { width:210mm; margin:0 auto; }
 """
+
+
+def _duplex_script(unit_sel: str, page_mm: float) -> str:
+    """量測每個學員區塊（unit_sel）高度 → 佔奇數印刷頁就在其後插空白頁。"""
+    return f"""<script>
+window.addEventListener('load', function () {{
+  var pagePx = {page_mm} * 96 / 25.4;
+  document.querySelectorAll('{unit_sel}').forEach(function (el) {{
+    var pages = Math.max(1, Math.ceil(el.offsetHeight / pagePx));
+    if (pages % 2 === 1) {{
+      var blank = document.createElement('div');
+      blank.className = 'blankpage';
+      el.insertAdjacentElement('afterend', blank);
+    }}
+  }});
+}});
+</script>"""
 
 
 def render_all(datas: list[dict], compact: bool = False, duplex: bool = False) -> str:
@@ -465,8 +486,12 @@ def render_all(datas: list[dict], compact: bool = False, duplex: bool = False) -
     title = f"小市集成績單批次（{len(datas)} 人{tag}）"
     extra = _COMPACT_STYLE if compact else (_DUPLEX_STYLE if duplex else "")
     if compact and duplex:
-        # 每組兩人固定從紙張正面（奇數頁）起，爆半頁的內容溢到同張背面不混組
-        extra += ".sheet + .sheet { page-break-before:right; break-before:right; }\n"
+        # 每組（.sheet）固定從紙張正面起：佔奇數頁的組後面補空白頁對齊奇偶
+        extra += (".blankpage { page-break-before:always; break-before:page; height:1px; }\n"
+                  "body { width:297mm; margin:0 auto; }\n")
+        body += _duplex_script(".sheet", 210 - 16)   # A4 橫式高 210mm − 上下邊 8mm×2
+    elif duplex:
+        body += _duplex_script("body > .page", 297 - 22)  # A4 直式高 297mm − 11mm×2
     return _wrap(title, body, extra)
 
 
