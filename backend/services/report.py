@@ -556,8 +556,7 @@ def render_award_slides(a: dict) -> str:
     e = a.get("best_earner")
     slides = [_teaser_slide("💰 頒獎", "最會賺錢獎")]
     slides.append(_winner_slide("💰 頒獎", "最會賺錢獎", e,
-                                (f'{"+" if e["diff"] >= 0 else ""}{e["diff"]} （較起始金）' if e else ""),
-                                "gold"))
+                                f'總收入 ${e["diff"]}' if e else "", "gold"))
 
     w = a.get("hardest_worker")
     slides.append(_teaser_slide("💪 頒獎", "勤奮工作獎"))

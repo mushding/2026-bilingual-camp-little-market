@@ -754,7 +754,7 @@ function renderAwards(a) {
       </div>
       <div class="card awCard single">
         <h3>💰 最會賺錢獎</h3>
-        ${who(a.best_earner, a.best_earner ? (a.best_earner.diff >= 0 ? '+' : '') + a.best_earner.diff + ' （較起始金）' : '')}
+        ${who(a.best_earner, a.best_earner ? '總收入 $' + a.best_earner.diff : '')}
       </div>
       <div class="card awCard single">
         <h3>💪 勤奮工作獎</h3>

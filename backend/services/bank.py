@@ -358,8 +358,12 @@ def awards(session) -> dict:
     points_top3 = sorted(studs, key=lambda x: x.points, reverse=True)[:3]
     kp_top3 = sorted(studs, key=lambda x: x.kingdom_points, reverse=True)[:3]
 
-    earner = max(studs, key=lambda x: (x.balance + x.deposit_balance) - x.seed_amount)
-    earner_diff = (earner.balance + earner.deposit_balance) - earner.seed_amount
+    # 最會賺錢（v2.21）：改用帳本總收入（公會/攤位獎金/利息/主題一；轉帳已剔除）。
+    # 舊算法 (現金+定存)−起始金 在 settle_final 歸零後會變 −seed，錯頒給起始金最小者。
+    from services.report import bulk_expense_income
+    inc_exp = bulk_expense_income(session)
+    earner = max(studs, key=lambda x: inc_exp.get(x.uid, (0, 0))[0])
+    earner_diff = inc_exp.get(earner.uid, (0, 0))[0]
 
     completed: dict[str, int] = {}
     stud_uids = {x.uid for x in studs}
