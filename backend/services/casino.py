@@ -37,8 +37,9 @@ def bet(session, round_id: int, uid: str, bet_type: str, amount: int) -> dict:
     r = session.get(CasinoRound, round_id)
     if r is None or r.status != "open":
         return {"ok": False, "message": "局不存在或已封盤"}
-    if not (BET_MIN <= amount <= BET_MAX):
-        return {"ok": False, "message": f"桌限 {BET_MIN}–{BET_MAX}"}
+    if amount < BET_MIN or (BET_MAX is not None and amount > BET_MAX):
+        cap = "∞" if BET_MAX is None else BET_MAX
+        return {"ok": False, "message": f"桌限 {BET_MIN}–{cap}"}
     if r.table == "dice" and bet_type not in DICE_TYPES:
         return {"ok": False, "message": "注別需 big/small/seven"}
     if r.table == "21":

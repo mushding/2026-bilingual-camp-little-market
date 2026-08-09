@@ -240,7 +240,7 @@ GET  /api/casino/round/{id}                            # 續桌
 
 **結算實作**：下注時已扣 amount。命中者 `balance += amount×2`（small/big）或 `amount×5`（seven）；未命中不動。每注寫一筆 transaction，整桌一筆 `casino_round`，全部在單一 transaction。
 
-**桌限驗證**（bet 時）：10 ≤ amount ≤ 100、amount ≤ balance、市場開、同一 round 同一 uid 僅一注（除非先 cancel）。
+**桌限驗證**（bet 時）：amount ≥ 10（無上限，v2.18）、amount ≤ balance、市場開、同一 round 同一 uid 僅一注（除非先 cancel）。
 
 ---
 
