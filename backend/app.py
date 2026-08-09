@@ -460,6 +460,17 @@ def report_awards_print():
         return report.render_award_slides(bank.awards(s))
 
 
+@app.get("/api/report/pair/print", response_class=HTMLResponse)
+def report_pair_print(uids: str = Query(...)):
+    """兩位學生成績單左右並排一張 A4 橫放（同省紙版版面）。uids=uid1,uid2。"""
+    ids = [u.strip() for u in uids.split(",") if u.strip()][:2]
+    with ReadSessionLocal() as s:
+        datas = [d for d in (report.build_data(s, u) for u in ids) if d]
+    if not datas:
+        raise HTTPException(404, "查無此學生")
+    return report.render_all(datas, compact=True)
+
+
 @app.get("/api/report/{uid}/data")
 def report_data(uid: str):
     with ReadSessionLocal() as s:

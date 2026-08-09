@@ -244,6 +244,10 @@
         <select id="reportPick"></select>
         <button onclick="openSingleReport()">開啟此學生</button>
       </div>
+      <div class="row">
+        <select id="reportPick2"><option value="">（第二位，可不選）</option></select>
+        <button onclick="openPairReport()">🌱 兩人左右並排（A4 橫放）</button>
+      </div>
     </div>
   </section>
 
@@ -698,11 +702,15 @@ const post = body => ({ method: 'POST', headers: { 'Content-Type': 'application/
 
 // ── 成績單 ──
 function renderReportPick() {
-  const sel = $('#reportPick'); if (!data) return;
-  const cur = sel.value;
-  sel.innerHTML = data.students.map(r =>
+  if (!data) return;
+  const opts = data.students.map(r =>
     `<option value="${escapeHtml(r.uid)}">${escapeHtml(r.name)}${r.group ? ' (' + escapeHtml(r.group) + ')' : ''}</option>`).join('');
+  const sel = $('#reportPick'), cur = sel.value;
+  sel.innerHTML = opts;
   if (cur) sel.value = cur;
+  const sel2 = $('#reportPick2'), cur2 = sel2.value;
+  sel2.innerHTML = '<option value="">（第二位，可不選）</option>' + opts;
+  sel2.value = cur2;
 }
 // 成績單 / 批次列印走 admin 權限，需帶 token → fetch 後用 blob 開新分頁。
 async function openReport(path) {
@@ -714,6 +722,13 @@ async function openReport(path) {
 }
 function openSingleReport() {
   const uid = $('#reportPick').value; if (uid) openReport('/api/report/' + encodeURIComponent(uid));
+}
+function openPairReport() {
+  const a = $('#reportPick').value, b = $('#reportPick2').value;
+  if (!a) return;
+  if (b && b === a) { toast('兩位要選不同學生', true); return; }
+  const uids = b ? a + ',' + b : a;
+  openReport('/api/report/pair/print?uids=' + encodeURIComponent(uids));
 }
 
 // ── 頒獎 ──
