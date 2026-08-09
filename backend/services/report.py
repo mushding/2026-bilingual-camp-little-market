@@ -516,6 +516,8 @@ body { font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; 
 .deco.bl { bottom:0; left:0; opacity:.9; transform:scale(1.7); transform-origin:bottom left; }
 .deco.br { bottom:0; right:0; opacity:.9; transform:scale(1.7); transform-origin:bottom right; }
 .slideContent { position:relative; z-index:1; }
+.brand { position:absolute; top:8mm; left:10mm; z-index:1; font-size:18px;
+         font-weight:700; letter-spacing:4px; color:var(--green); opacity:.85; }
 .slideKicker { font-size:22px; letter-spacing:6px; color:var(--green); font-weight:700; }
 .slideTitle { font-size:56px; font-weight:800; margin:8px 0 28px; color:var(--ink); }
 .slideMedal { font-size:120px; line-height:1; margin-bottom:8px; }
@@ -544,6 +546,7 @@ def _slide(kicker, title, body_html, rank_class=""):
 <div class="deco tr">{_DECO_CLOUDS}</div>
 <div class="deco bl">{_DECO_ISLAND}</div>
 <div class="deco br">{_DECO_DUNE}</div>
+<div class="brand">2026 雙語營・理財島之好管家</div>
 <div class="slideContent">
 <div class="slideKicker">{kicker}</div>
 <div class="slideTitle">{title}</div>
