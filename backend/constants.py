@@ -44,7 +44,7 @@ GAME_KEY_TO_STALL = {v[0]: k for k, v in GAMES.items()}
 # 銀行
 DEPOSIT_RATE = 0.2          # 20%/天，複利（legacy 手動結息備援，v2.7 起主要走 tick 制）
 MAX_SETTLEMENTS = 3
-MARKET_CLOSE_RATE = 0.1     # 未兌換現金 + 定存本利 ×0.1
+MARKET_CLOSE_RATE = 0.01    # 未兌換現金 + 定存本利 ×0.01（v2.20，原 0.1）
 
 # 定存 tick 制（v2.7）：市場開放時每 tick_min 分鐘對定存複利 rate_pct%。
 # 這裡只是 DB 初始預設；實際值存 game_state，admin panel 定存頁可調。

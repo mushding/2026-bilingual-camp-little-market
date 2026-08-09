@@ -259,7 +259,7 @@ GET  /api/admin/state                    # current_day, market_open, settlement_
 - 對所有 `deposit_balance > 0` 學生：`interest = floor(deposit_balance * 0.2)`；`deposit_balance += interest`；寫 transaction(action=interest)。
 - **複利**，每場對「當前定存餘額」+20%，無條件捨去整數。範例：100 → 120 → 144 → 172（最大造幣率 +72.8%，SOT §7.3）。
 
-### 5.2 市場關閉（未兌換現金 ×0.1，封堵套利）
+### 5.2 市場關閉（未兌換現金 ×0.01，封堵套利）
 
 - `market_open = False`。
 - 對每位學生：`taxable = balance + deposit_balance`；`points += floor(taxable * 0.1)`；`balance=0; deposit_balance=0`；寫 transaction(action=market_close, meta={taxable})。

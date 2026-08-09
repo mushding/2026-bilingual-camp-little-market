@@ -244,7 +244,7 @@ ScanScreen
 |---|---|---|---|
 | 換日 `set_day` | `POST /api/admin/set_day {day}` | 總控同工 | 每場小市集開始前切到 D1 / D2 / D3 |
 | 每場結息 `settle_interest` | `POST /api/admin/settle_interest {day}` | 總控同工 | **D1（18:10）/ D2（14:00）/ D3（市場關閉時）各場結束各按一次**，全營最多 3 次 |
-| 市場關閉 `market_close` | `POST /api/admin/market_close` | 總控同工 | **D3 約 10:25 突襲**，主持喊停同時執行（一鍵凍結，未兌換現金＋定存本利 ×0.1） |
+| 市場關閉 `market_close` | `POST /api/admin/market_close` | 總控同工 | **D3 約 10:25 突襲**，主持喊停同時執行（一鍵凍結，未兌換現金＋定存本利 ×0.01） |
 | 全重置 `reset` | `POST /api/admin/reset` | 總控同工 | 測試用：學員回起始金、清空帳本/任務/賭局/見證、天數回 D1、市場重開 |
 | 查全域狀態 | `GET /api/admin/state` | 總控同工 | 隨時確認 `current_day` / `market_open` / `settlement_count` |
 

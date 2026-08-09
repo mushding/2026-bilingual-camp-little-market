@@ -186,7 +186,7 @@ def test_market_close_then_settle():
     with S.begin() as s:
         g = s.get(models.Student, "G")
         assert g.balance == 0 and g.deposit_balance == 0
-        assert g.points == 40  # floor((300+100)*0.1)，午餐已先扣走 100
+        assert g.points == 4  # floor((300+100)*0.01)，午餐已先扣走 100
     with S.begin() as s:                              # 沒關市不能結算
         st = s.get(models.GameState, 1); st.final_closed = 0; st.final_settled = 0
     with S.begin() as s:

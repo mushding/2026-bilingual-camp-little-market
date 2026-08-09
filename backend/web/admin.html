@@ -163,14 +163,14 @@
     </div>
     <div class="card">
       <h3>市場關閉 market_close（D3 突襲，不可逆）</h3>
-      <p>凍結市場：攤位全停，只剩餐費可扣。<b>×0.1 折算移到下面的「結算」</b>——
+      <p>凍結市場：攤位全停，只剩餐費可扣。<b>×0.01 折算移到下面的「結算」</b>——
          關市後先全體扣 D3 午餐，扣完再按結算。</p>
       <button class="warn" onclick="confirmRun('🔒 市場關閉？攤位全停（餐費照收），不可逆','/api/admin/market_close')">🔒 市場關閉</button>
     </div>
     <div class="card">
       <h3>結算 settle_final（關市 → 扣完 D3 午餐 → 按這顆）</h3>
-      <p>所有未兌換現金＋定存本利 ×0.1 計入積分（銷毀 90%）、餘額歸零、凍結名次。只可按一次。</p>
-      <button class="warn" onclick="confirmRun('🏁 結算？現金×0.1 計入積分、凍結名次，不可逆。\n確定 D3 午餐已經扣完了嗎？','/api/admin/settle_final')">🏁 結算</button>
+      <p>所有未兌換現金＋定存本利 ×0.01 計入積分（銷毀 99%）、餘額歸零、凍結名次。只可按一次。</p>
+      <button class="warn" onclick="confirmRun('🏁 結算？現金×0.01 計入積分、凍結名次，不可逆。\n確定 D3 午餐已經扣完了嗎？','/api/admin/settle_final')">🏁 結算</button>
     </div>
     <div class="card">
       <h3>全重置 reset（測試用，不可復原）</h3>

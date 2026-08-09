@@ -203,7 +203,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 ? null
                 : () async {
                     if (await _confirm('⚠️ 市場關閉',
-                        '所有未兌換現金＋定存本利 ×0.1（銷毀 90%），市場凍結。\n只按一次、不可預告、不可逆。確定執行？')) {
+                        '所有未兌換現金＋定存本利 ×0.01（銷毀 99%），市場凍結。\n只按一次、不可預告、不可逆。確定執行？')) {
                       await _run(() => ApiClient.adminMarketClose(), '市場關閉');
                     }
                   },
