@@ -232,8 +232,9 @@ def market_close(session) -> dict:
     # D1 曾誤按（2026-08-07）：最終關市只在 D3 有意義，其他天一律擋
     if st.current_day != "D3":
         return {"ok": False, "message": f"目前是 {st.current_day}，最終關市僅限 D3（當日收市請用「當日截止」）"}
-    if not st.market_open:
-        return {"ok": False, "message": "市場已關閉"}
+    if st.final_closed:
+        return {"ok": False, "message": "已最終關市"}
+    # market_open=0（當日截止）也放行：升級為最終關市，否則結算會卡死
     st.market_open = 0
     st.final_closed = 1
     st.closing_soon = 0
