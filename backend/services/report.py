@@ -460,9 +460,13 @@ def render_all(datas: list[dict], compact: bool = False, duplex: bool = False) -
     if not datas:
         return _wrap("小市集成績單（批次）", '<p style="padding:20px">尚無學生資料</p>')
     body = _pair_bodies(datas) if compact else "".join(_render_body(d) for d in datas)
-    tag = "・省紙版" if compact else ("・雙面版" if duplex else "")
+    tag = ("・省紙雙面版" if duplex else "・省紙版") if compact \
+        else ("・雙面版" if duplex else "")
     title = f"小市集成績單批次（{len(datas)} 人{tag}）"
     extra = _COMPACT_STYLE if compact else (_DUPLEX_STYLE if duplex else "")
+    if compact and duplex:
+        # 每組兩人固定從紙張正面（奇數頁）起，爆半頁的內容溢到同張背面不混組
+        extra += ".sheet + .sheet { page-break-before:right; break-before:right; }\n"
     return _wrap(title, body, extra)
 
 
